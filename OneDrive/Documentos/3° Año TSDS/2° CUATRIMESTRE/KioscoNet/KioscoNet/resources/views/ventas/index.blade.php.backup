@@ -1,0 +1,627 @@
+@extends('layouts.app')
+
+@section('title', 'Ventas')
+
+@section('content')
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="h3 mb-0">
+                <i class="fas fa-shopping-cart"></i> Ventas
+            </h1>
+            <a href="{{ route('ventas.create') }}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Nueva Venta
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Filtros -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" action="{{ route('ventas.index') }}">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label for="fecha_desde" class="form-label">Desde</label>
+                    <input type="date" class="form-control" id="fecha_desde" name="fecha_desde" value="{{ request('fecha_desde') }}">
+                </div>
+                <div class="col-md-3">
+                    <label for="fecha_hasta" class="form-label">Hasta</label>
+                    <input type="date" class="form-control" id="fecha_hasta" name="fecha_hasta" value="{{ request('fecha_hasta') }}">
+                </div>
+                <div class="col-md-3">
+                    <label for="metodo_pago" class="form-label">Método de Pago</label>
+                    <select class="form-select" id="metodo_pago" name="metodo_pago">
+                        <option value="">Todos</option>
+                        <option value="efectivo" {{ request('metodo_pago') == 'efectivo' ? 'selected' : '' }}>Efectivo</option>
+                        <option value="tarjeta" {{ request('metodo_pago') == 'tarjeta' ? 'selected' : '' }}>Tarjeta</option>
+                        <option value="transferencia" {{ request('metodo_pago') == 'transferencia' ? 'selected' : '' }}>Transferencia</option>
+                        <option value="billetera" {{ request('metodo_pago') == 'billetera' ? 'selected' : '' }}>Billetera</option>
+                        <option value="cc" {{ request('metodo_pago') == 'cc' ? 'selected' : '' }}>Cuenta Corriente</option>
+                    </select>
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <button type="submit" class="btn btn-secondary me-2">
+                        <i class="fas fa-search"></i> Filtrar
+                    </button>
+                    <a href="{{ route('ventas.index') }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-times"></i> Limpiar
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Tabla de ventas -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">Lista de Ventas</h5>
+    </div>
+    <div class="card-body">
+        @if($ventas->count() > 0)
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>Número</th>
+                        <th>Fecha</th>
+                        <th>Cliente</th>
+                        <th>Vendedor</th>
+                        <th>Total</th>
+                        <th>Método Pago</th>
+                        <th width="150">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($ventas as $venta)
+                    <tr>
+                        <td>
+                            <strong>{{ $venta->numero }}</strong>
+                        </td>
+                        <td>{{ $venta->created_at->format('d/m/Y H:i') }}</td>
+                        <td>
+                            @if($venta->cliente)
+                                {{ $venta->cliente->nombre }}
+                            @else
+                                <span class="text-muted">Cliente Final</span>
+                            @endif
+                        </td>
+                        <td>{{ $venta->usuario->nombre }}</td>
+                        <td>
+                            <strong class="text-success">${{ number_format($venta->total, 2) }}</strong>
+                        </td>
+                        <td>
+                            @switch($venta->metodo_pago)
+                                @case('efectivo')
+                                    <span class="badge bg-success">
+                                        <i class="fas fa-money-bill"></i> Efectivo
+                                    </span>
+                                    @break
+                                @case('tarjeta')
+                                    <span class="badge bg-primary">
+                                        <i class="fas fa-credit-card"></i> Tarjeta
+                                    </span>
+                                    @break
+                                @case('transferencia')
+                                    <span class="badge bg-info">
+                                        <i class="fas fa-exchange-alt"></i> Transferencia
+                                    </span>
+                                    @break
+                                @case('billetera')
+                                    <span class="badge bg-warning">
+                                        <i class="fas fa-mobile-alt"></i> Billetera
+                                    </span>
+                                    @break
+                                @case('cc')
+                                    <span class="badge bg-secondary">
+                                        <i class="fas fa-file-invoice"></i> Cta. Cte.
+                                    </span>
+                                    @break
+                            @endswitch
+                        </td>
+                        <td>
+                            <div class="btn-group" role="group">
+                                <a href="{{ route('ventas.show', $venta) }}" class="btn btn-sm btn-outline-info" title="Ver detalle">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <a href="{{ route('ventas.ticket', $venta) }}" class="btn btn-sm btn-outline-secondary" title="Imprimir ticket" target="_blank">
+                                    <i class="fas fa-print"></i>
+                                </a>
+                                @if(optional(auth()->user())->esAdministrador())
+                                <button type="button" class="btn btn-sm btn-outline-danger" title="Anular venta" onclick="anularVenta({{ $venta->id }})">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                                @endif
+                            </div>
+                        </td>
+                    </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Paginación -->
+        {{ $ventas->appends(request()->query())->links() }}
+        
+        @else
+        <div class="text-center py-5">
+            <i class="fas fa-shopping-cart fa-3x text-muted mb-3"></i>
+            <h5 class="text-muted">No hay ventas registradas</h5>
+            <p class="text-muted">Comienza creando tu primera venta</p>
+            <a href="{{ route('ventas.create') }}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Nueva Venta
+            </a>
+        </div>
+        @endif
+    </div>
+</div>
+
+<!-- Modal para anular venta -->
+<div class="modal fade" id="modalAnular" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Anular Venta</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>¿Está seguro de que desea anular esta venta?</p>
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    Esta acción restaurará el stock de los productos y no se puede deshacer.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <form id="formAnular" method="POST" class="d-inline">
+                    @csrf
+                    @method('DELETE')
+                    <button type="submit" class="btn btn-danger">Anular Venta</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@endsection
+
+@push('scripts')
+<script>
+function anularVenta(ventaId) {
+    const modal = new bootstrap.Modal(document.getElementById('modalAnular'));
+    const form = document.getElementById('formAnular');
+    form.action = `/ventas/${ventaId}`;
+    modal.show();
+}
+</script>
+@endpush@extends('layouts.app')
+
+@section('title', 'Historial de Ventas')
+
+@section('content')
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="h3 mb-0">
+                <i class="fas fa-receipt"></i> Historial de Ventas
+            </h1>
+            <a href="{{ route('ventas.create') }}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Nueva Venta
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Filtros de búsqueda -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">
+            <i class="fas fa-filter"></i> Filtros de Búsqueda
+        </h5>
+    </div>
+    <div class="card-body">
+        <form method="GET" action="{{ route('ventas.index') }}" id="filtrosForm">
+            <div class="row">
+                <div class="col-md-3">
+                    <label for="fecha_desde" class="form-label">Fecha Desde</label>
+                    <input type="date" 
+                           class="form-control" 
+                           id="fecha_desde" 
+                           name="fecha_desde" 
+                           value="{{ request('fecha_desde', date('Y-m-01')) }}">
+                </div>
+                <div class="col-md-3">
+                    <label for="fecha_hasta" class="form-label">Fecha Hasta</label>
+                    <input type="date" 
+                           class="form-control" 
+                           id="fecha_hasta" 
+                           name="fecha_hasta" 
+                           value="{{ request('fecha_hasta', date('Y-m-d')) }}">
+                </div>
+                <div class="col-md-3">
+                    <label for="metodo_pago" class="form-label">Método de Pago</label>
+                    <select class="form-select" id="metodo_pago" name="metodo_pago">
+                        <option value="">Todos los métodos</option>
+                        <option value="efectivo" {{ request('metodo_pago') == 'efectivo' ? 'selected' : '' }}>Efectivo</option>
+                        <option value="tarjeta" {{ request('metodo_pago') == 'tarjeta' ? 'selected' : '' }}>Tarjeta</option>
+                        <option value="transferencia" {{ request('metodo_pago') == 'transferencia' ? 'selected' : '' }}>Transferencia</option>
+                        <option value="cc" {{ request('metodo_pago') == 'cc' ? 'selected' : '' }}>Cuenta Corriente</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="usuario_id" class="form-label">Vendedor</label>
+                    <select class="form-select" id="usuario_id" name="usuario_id">
+                        <option value="">Todos los vendedores</option>
+                        @foreach($usuarios ?? [] as $usuario)
+                        <option value="{{ $usuario->id }}" {{ request('usuario_id') == $usuario->id ? 'selected' : '' }}>
+                            {{ $usuario->name }}
+                        </option>
+                        @endforeach
+                    </select>
+                </div>
+            </div>
+            <div class="row mt-3">
+                <div class="col-md-6">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-search"></i> Buscar
+                    </button>
+                    <a href="{{ route('ventas.index') }}" class="btn btn-secondary">
+                        <i class="fas fa-times"></i> Limpiar
+                    </a>
+                </div>
+                <div class="col-md-6 text-end">
+                    <button type="button" class="btn btn-success" onclick="exportarVentas()">
+                        <i class="fas fa-download"></i> Exportar
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Resumen estadístico -->
+@if($ventas->count() > 0)
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="mb-0">{{ $ventas->count() }}</h4>
+                        <p class="mb-0">Total Ventas</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-shopping-cart fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="mb-0">${{ number_format($ventas->sum('total'), 2) }}</h4>
+                        <p class="mb-0">Total Facturado</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-dollar-sign fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="mb-0">${{ number_format($ventas->avg('total'), 2) }}</h4>
+                        <p class="mb-0">Promedio por Venta</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-chart-line fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-warning text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="mb-0">{{ $ventas->where('metodo_pago', 'cc')->count() }}</h4>
+                        <p class="mb-0">Cuentas Corrientes</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-file-invoice fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+@endif
+
+<!-- Tabla de ventas -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">
+            <i class="fas fa-list"></i> Listado de Ventas
+        </h5>
+    </div>
+    <div class="card-body">
+        @if($ventas->count() > 0)
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>Número</th>
+                        <th>Fecha/Hora</th>
+                        <th>Cliente</th>
+                        <th>Vendedor</th>
+                        <th>Método Pago</th>
+                        <th>Total</th>
+                        <th>Estado</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($ventas as $venta)
+                    <tr>
+                        <td>
+                            <strong>{{ $venta->numero }}</strong>
+                        </td>
+                        <td>
+                            <small>
+                                {{ $venta->created_at->format('d/m/Y') }}<br>
+                                {{ $venta->created_at->format('H:i:s') }}
+                            </small>
+                        </td>
+                        <td>
+                            @if($venta->cliente)
+                                <i class="fas fa-user"></i> {{ $venta->cliente->nombre }}
+                            @else
+                                <i class="fas fa-user-times text-muted"></i> Cliente Final
+                            @endif
+                        </td>
+                        <td>
+                            <i class="fas fa-user-tag"></i> {{ $venta->usuario->name }}
+                        </td>
+                        <td>
+                            @php
+                                $metodosIconos = [
+                                    'efectivo' => 'fas fa-money-bill text-success',
+                                    'tarjeta' => 'fas fa-credit-card text-primary', 
+                                    'transferencia' => 'fas fa-exchange-alt text-info',
+                                    'cc' => 'fas fa-file-invoice text-warning'
+                                ];
+                                $metodosTextos = [
+                                    'efectivo' => 'Efectivo',
+                                    'tarjeta' => 'Tarjeta',
+                                    'transferencia' => 'Transferencia', 
+                                    'cc' => 'Cta. Corriente'
+                                ];
+                            @endphp
+                            <i class="{{ $metodosIconos[$venta->metodo_pago] ?? 'fas fa-question' }}"></i>
+                            {{ $metodosTextos[$venta->metodo_pago] ?? $venta->metodo_pago }}
+                        </td>
+                        <td>
+                            <strong class="text-success">${{ number_format($venta->total, 2) }}</strong>
+                            @if($venta->vuelto > 0)
+                                <br><small class="text-muted">Vuelto: ${{ number_format($venta->vuelto, 2) }}</small>
+                            @endif
+                        </td>
+                        <td>
+                            @if(isset($venta->anulada) && $venta->anulada)
+                                <span class="badge bg-danger">Anulada</span>
+                            @else
+                                <span class="badge bg-success">Completada</span>
+                            @endif
+                        </td>
+                        <td>
+                            <div class="btn-group" role="group">
+                                <a href="{{ route('ventas.show', $venta) }}" 
+                                   class="btn btn-sm btn-outline-primary" 
+                                   title="Ver detalle">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <a href="{{ route('ventas.ticket', $venta) }}" 
+                                   class="btn btn-sm btn-outline-secondary" 
+                                   title="Imprimir ticket" 
+                                   target="_blank">
+                                    <i class="fas fa-print"></i>
+                                </a>
+                                @if(!isset($venta->anulada) || !$venta->anulada)
+                                    @can('anular_ventas')
+                                    <button type="button" 
+                                            class="btn btn-sm btn-outline-danger" 
+                                            title="Anular venta"
+                                            onclick="anularVenta({{ $venta->id }}, '{{ $venta->numero }}')">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                    @endcan
+                                @endif
+                            </div>
+                        </td>
+                    </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Paginación -->
+        <div class="d-flex justify-content-between align-items-center mt-3">
+            <div>
+                <small class="text-muted">
+                    Mostrando {{ $ventas->firstItem() }} a {{ $ventas->lastItem() }} 
+                    de {{ $ventas->total() }} resultados
+                </small>
+            </div>
+            <div>
+                {{ $ventas->appends(request()->query())->links() }}
+            </div>
+        </div>
+        @else
+        <div class="text-center py-5">
+            <i class="fas fa-receipt fa-3x text-muted mb-3"></i>
+            <h5 class="text-muted">No se encontraron ventas</h5>
+            <p class="text-muted">No hay ventas registradas con los filtros aplicados.</p>
+            <a href="{{ route('ventas.create') }}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Registrar Primera Venta
+            </a>
+        </div>
+        @endif
+    </div>
+</div>
+
+<!-- Modal para anular venta -->
+<div class="modal fade" id="anularVentaModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-exclamation-triangle text-warning"></i> 
+                    Anular Venta
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="anularVentaForm" method="POST">
+                @csrf
+                @method('DELETE')
+                <div class="modal-body">
+                    <p>¿Está seguro que desea anular la venta <strong id="numeroVenta"></strong>?</p>
+                    <div class="alert alert-warning">
+                        <i class="fas fa-info-circle"></i> 
+                        Esta acción restaurará el stock de los productos vendidos y 
+                        @if(auth()->user()->can('manejar_caja'))
+                            ajustará el movimiento en caja.
+                        @else
+                            generará un registro de anulación.
+                        @endif
+                    </div>
+                    <div class="mb-3">
+                        <label for="motivo_anulacion" class="form-label">Motivo de Anulación</label>
+                        <textarea class="form-control" 
+                                  id="motivo_anulacion" 
+                                  name="motivo" 
+                                  rows="3" 
+                                  placeholder="Ingrese el motivo de la anulación..."
+                                  required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-times"></i> Anular Venta
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@endsection
+
+@push('scripts')
+<script>
+/**
+ * Función para anular una venta
+ */
+function anularVenta(ventaId, numeroVenta) {
+    $('#numeroVenta').text(numeroVenta);
+    $('#anularVentaForm').attr('action', `/ventas/${ventaId}`);
+    $('#motivo_anulacion').val('');
+    $('#anularVentaModal').modal('show');
+}
+
+/**
+ * Función para exportar ventas
+ */
+function exportarVentas() {
+    const form = document.getElementById('filtrosForm');
+    const formData = new FormData(form);
+    
+    // Crear URL con parámetros
+    const params = new URLSearchParams();
+    for (let [key, value] of formData.entries()) {
+        if (value) params.append(key, value);
+    }
+    
+    // Agregar parámetro de exportación
+    params.append('export', 'excel');
+    
+    // Redirigir para descargar
+    window.location.href = `{{ route('ventas.index') }}?${params.toString()}`;
+}
+
+/**
+ * Auto-envío de formulario cuando cambian los filtros
+ */
+$(document).ready(function() {
+    $('#fecha_desde, #fecha_hasta, #metodo_pago, #usuario_id').change(function() {
+        // Opcional: envío automático del formulario
+        // $('#filtrosForm').submit();
+    });
+    
+    // Validar fechas
+    $('#fecha_desde, #fecha_hasta').change(function() {
+        const desde = new Date($('#fecha_desde').val());
+        const hasta = new Date($('#fecha_hasta').val());
+        
+        if (desde > hasta) {
+            alert('La fecha "desde" no puede ser posterior a la fecha "hasta"');
+            $(this).val('');
+        }
+    });
+});
+</script>
+@endpush
+
+@push('styles')
+<style>
+.table th {
+    border-top: none;
+    font-weight: 600;
+}
+
+.btn-group .btn {
+    border-radius: 0;
+}
+
+.btn-group .btn:first-child {
+    border-top-left-radius: 0.375rem;
+    border-bottom-left-radius: 0.375rem;
+}
+
+.btn-group .btn:last-child {
+    border-top-right-radius: 0.375rem;
+    border-bottom-right-radius: 0.375rem;
+}
+
+.card {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.badge {
+    font-size: 0.75em;
+}
+
+@media (max-width: 768px) {
+    .btn-group {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .btn-group .btn {
+        border-radius: 0.375rem !important;
+        margin-bottom: 2px;
+    }
+}
+</style>
+@endpush

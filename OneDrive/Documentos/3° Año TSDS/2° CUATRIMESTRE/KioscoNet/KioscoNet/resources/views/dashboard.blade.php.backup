@@ -1,0 +1,205 @@
+@extends('layouts.app')
+
+@section('title', 'Dashboard')
+
+@section('content')
+<div class="row">
+    <div class="col-12">
+        <h1 class="h3 mb-4">
+            <i class="fas fa-tachometer-alt"></i> Dashboard
+            <small class="text-muted">Bienvenido, {{ auth()->user()->nombre }}</small>
+        </h1>
+    </div>
+</div>
+
+<!-- Tarjetas de estadísticas -->
+<div class="row mb-4">
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-primary shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                            Ventas Hoy
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                            {{ $stats['ventas_hoy'] ?? 0 }}
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-shopping-cart fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-success shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                            Ingresos Hoy
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                            ${{ number_format($stats['ingresos_hoy'] ?? 0, 2) }}
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-dollar-sign fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-warning shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                            Stock Bajo
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                            {{ $stats['productos_stock_bajo'] ?? 0 }}
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-exclamation-triangle fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-info shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                            Saldo Caja
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                            ${{ number_format($stats['saldo_caja'] ?? 0, 2) }}
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-wallet fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Accesos rápidos -->
+<div class="row mb-4">
+    <div class="col-12">
+        <h4>Accesos Rápidos</h4>
+    </div>
+    <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+        <a href="{{ route('ventas.create') }}" class="btn btn-primary btn-lg w-100 h-100 d-flex flex-column justify-content-center">
+            <i class="fas fa-plus-circle fa-2x mb-2"></i>
+            Nueva Venta
+        </a>
+    </div>
+    <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+        <a href="{{ route('productos.index') }}" class="btn btn-success btn-lg w-100 h-100 d-flex flex-column justify-content-center">
+            <i class="fas fa-box fa-2x mb-2"></i>
+            Productos
+        </a>
+    </div>
+    <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+        <a href="{{ route('clientes.index') }}" class="btn btn-info btn-lg w-100 h-100 d-flex flex-column justify-content-center">
+            <i class="fas fa-users fa-2x mb-2"></i>
+            Clientes
+        </a>
+    </div>
+    <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+        <a href="{{ route('caja.index') }}" class="btn btn-warning btn-lg w-100 h-100 d-flex flex-column justify-content-center">
+            <i class="fas fa-cash-register fa-2x mb-2"></i>
+            Caja
+        </a>
+    </div>
+    <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+        <a href="{{ route('caja.arqueo') }}" class="btn btn-secondary btn-lg w-100 h-100 d-flex flex-column justify-content-center">
+            <i class="fas fa-calculator fa-2x mb-2"></i>
+            Arqueo
+        </a>
+    </div>
+    @if(optional(auth()->user())->esAdministrador())
+    <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+        <a href="{{ route('reportes.index') }}" class="btn btn-dark btn-lg w-100 h-100 d-flex flex-column justify-content-center">
+            <i class="fas fa-chart-bar fa-2x mb-2"></i>
+            Reportes
+        </a>
+    </div>
+    @endif
+</div>
+
+@if(isset($productosStockBajo) && $productosStockBajo->count() > 0)
+<!-- Alertas -->
+<div class="row">
+    <div class="col-12">
+        <div class="card border-left-warning shadow">
+            <div class="card-header bg-warning text-white">
+                <i class="fas fa-exclamation-triangle"></i> Productos con Stock Bajo
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Producto</th>
+                                <th>Stock Actual</th>
+                                <th>Stock Mínimo</th>
+                                <th>Proveedor</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($productosStockBajo as $producto)
+                            <tr>
+                                <td>{{ $producto->nombre }}</td>
+                                <td><span class="badge bg-danger">{{ $producto->stock }}</span></td>
+                                <td>{{ $producto->stock_minimo }}</td>
+                                <td>{{ $producto->proveedor->nombre ?? 'N/A' }}</td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+                <div class="text-end">
+                    <a href="{{ route('productos.stock-bajo') }}" class="btn btn-warning">
+                        Ver todos los productos con stock bajo
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+@endif
+
+@endsection
+
+@push('styles')
+<style>
+.border-left-primary {
+    border-left: .25rem solid #4e73df!important;
+}
+.border-left-success {
+    border-left: .25rem solid #1cc88a!important;
+}
+.border-left-warning {
+    border-left: .25rem solid #f6c23e!important;
+}
+.border-left-info {
+    border-left: .25rem solid #36b9cc!important;
+}
+.text-xs {
+    font-size: .7rem;
+}
+</style>
+@endpush
