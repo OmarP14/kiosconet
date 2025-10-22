@@ -24,6 +24,7 @@ class VentaController extends Controller
     public function create()
     {
         $clientes = Cliente::where('activo', true)
+            ->orderByRaw('CASE WHEN id = 999 THEN 0 ELSE 1 END')
             ->orderBy('nombre', 'asc')
             ->get();
 

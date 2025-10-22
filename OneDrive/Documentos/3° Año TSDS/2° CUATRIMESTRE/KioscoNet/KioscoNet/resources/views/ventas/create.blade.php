@@ -41,19 +41,24 @@ Sistema de Ventas MEJORADO - Versión con todos los RF implementados
                                     <i class="fas fa-user me-1"></i>Cliente *
                                 </label>
                                 <select class="form-select" id="cliente_id" name="cliente_id" required>
-                                    <option value="">Seleccionar cliente...</option>
                                     @foreach($clientes as $cliente)
-                                    <option value="{{ $cliente->id }}" 
+                                    <option value="{{ $cliente->id }}"
                                                 data-limite="{{ $cliente->limite_credito ?? 0 }}"
                                                 data-saldo="{{ $cliente->saldo_cc ?? 0 }}"
-                                                data-tipo="{{ $cliente->tipo_cliente ?? 'minorista' }}">
+                                                data-tipo="{{ $cliente->tipo_cliente ?? 'minorista' }}"
+                                                {{ $cliente->id == 999 ? 'selected' : '' }}>
                                             {{ $cliente->nombre }} {{ $cliente->apellido }}
-                                            @if($cliente->limite_credito > 0)
+                                            @if($cliente->id == 999)
+                                                <i class="fas fa-users"></i>
+                                            @elseif($cliente->limite_credito > 0)
                                                 <span class="badge bg-info">CC Habilitada</span>
                                             @endif
                                         </option>
                                     @endforeach
                                 </select>
+                                <small class="text-muted">
+                                    Por defecto se usa "Consumidor Final". Cambia solo si el cliente tiene cuenta.
+                                </small>
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label fw-bold">
@@ -895,7 +900,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // ==========================================
     function actualizarInfoCliente() {
         const selectedOption = clienteSelect.options[clienteSelect.selectedIndex];
-        
+
         if (!selectedOption.value) {
             document.getElementById('info-cuenta-corriente').style.display = 'none';
             clienteSeleccionado = null;
@@ -911,19 +916,25 @@ document.addEventListener('DOMContentLoaded', function() {
 
         listaPreciosSelect.value = clienteSeleccionado.tipo;
 
+        // Ocultar info de CC para Consumidor Final (ID 999)
+        if (clienteSeleccionado.id == '999') {
+            document.getElementById('info-cuenta-corriente').style.display = 'none';
+            return;
+        }
+
         const disponible = clienteSeleccionado.limite - clienteSeleccionado.saldo;
-        const porcentajeUso = clienteSeleccionado.limite > 0 
-            ? (clienteSeleccionado.saldo / clienteSeleccionado.limite) * 100 
+        const porcentajeUso = clienteSeleccionado.limite > 0
+            ? (clienteSeleccionado.saldo / clienteSeleccionado.limite) * 100
             : 0;
-        
+
         document.getElementById('saldo-actual').textContent = formatearMoneda(clienteSeleccionado.saldo);
         document.getElementById('limite-credito').textContent = formatearMoneda(clienteSeleccionado.limite);
         document.getElementById('credito-disponible').textContent = formatearMoneda(disponible);
-        
+
         const progressBar = document.getElementById('progress-credito');
         progressBar.style.width = porcentajeUso + '%';
         progressBar.textContent = Math.round(porcentajeUso) + '%';
-        
+
         progressBar.className = 'progress-bar';
         if (porcentajeUso < 50) {
             progressBar.classList.add('bg-success');
@@ -932,7 +943,7 @@ document.addEventListener('DOMContentLoaded', function() {
         } else {
             progressBar.classList.add('bg-danger');
         }
-        
+
         if (clienteSeleccionado.limite > 0) {
             document.getElementById('info-cuenta-corriente').style.display = 'block';
         }

@@ -15,6 +15,7 @@ class Caja extends Model
         'usuario_id',
         'tipo',
         'concepto',
+        'descripcion',
         'monto',
     ];
 

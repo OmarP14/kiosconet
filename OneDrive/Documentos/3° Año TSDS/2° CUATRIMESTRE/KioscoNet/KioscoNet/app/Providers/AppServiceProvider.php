@@ -3,7 +3,8 @@
 namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
-use Illuminate\Support\Facades\Schema; 
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Pagination\Paginator;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -20,6 +21,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-    Schema::defaultStringLength(191);
+        Schema::defaultStringLength(191);
+
+        // Usar Bootstrap 5 para la paginación en lugar de Tailwind
+        Paginator::useBootstrapFive();
     }
 }

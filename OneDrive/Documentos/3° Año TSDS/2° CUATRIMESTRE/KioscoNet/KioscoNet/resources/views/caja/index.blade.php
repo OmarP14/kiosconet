@@ -177,8 +177,8 @@
                     @foreach($movimientos as $movimiento)
                     <tr>
                         <td>
-                            {{ $movimiento->created_at->format('d/m/Y') }}<br>
-                            <small class="text-muted">{{ $movimiento->created_at->format('H:i:s') }}</small>
+                            {{ \Carbon\Carbon::parse($movimiento->created_at)->format('d/m/Y') }}<br>
+                            <small class="text-muted">{{ \Carbon\Carbon::parse($movimiento->created_at)->format('H:i:s') }}</small>
                         </td>
                         <td>
                             @if($movimiento->tipo === 'ingreso')
@@ -198,7 +198,7 @@
                             @endif
                         </td>
                         <td>
-                            <i class="fas fa-user"></i> {{ $movimiento->usuario->name }}
+                            <i class="fas fa-user"></i> {{ $movimiento->usuario_nombre ?? 'N/A' }}
                         </td>
                         <td class="text-end">
                             <strong class="{{ $movimiento->tipo === 'ingreso' ? 'text-success' : 'text-danger' }}">

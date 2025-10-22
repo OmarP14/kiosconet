@@ -167,6 +167,34 @@
 
         {{-- COLUMNA DERECHA --}}
         <div class="col-md-4">
+            {{-- GANANCIA DEL DÍA --}}
+            <div class="card shadow-sm mb-4 border-primary">
+                <div class="card-header bg-gradient text-white" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-line me-2"></i>
+                        💰 Ganancia del Día
+                    </h5>
+                </div>
+                <div class="card-body text-center p-4">
+                    <div class="mb-3">
+                        <small class="text-muted text-uppercase">Ingresos - Egresos</small>
+                    </div>
+                    <h1 class="display-4 mb-3 {{ $saldoDelDia >= 0 ? 'text-success' : 'text-danger' }}" style="font-weight: 700;">
+                        {{ $saldoDelDia >= 0 ? '+' : '' }}${{ number_format($saldoDelDia, 2) }}
+                    </h1>
+                    <div class="row text-center small">
+                        <div class="col-6 border-end">
+                            <div class="text-success fw-bold">+${{ number_format($totalIngresos, 2) }}</div>
+                            <div class="text-muted">Ingresos</div>
+                        </div>
+                        <div class="col-6">
+                            <div class="text-danger fw-bold">-${{ number_format($totalEgresos, 2) }}</div>
+                            <div class="text-muted">Egresos</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             {{-- SALDO TOTAL DE CAJA --}}
             <div class="card shadow-sm mb-4">
                 <div class="card-header bg-success text-white">

@@ -27,7 +27,7 @@ class CajaController extends Controller
             // Consulta base con joins para obtener nombre del usuario
             $query = DB::table('caja')
                     ->leftJoin('usuarios', 'caja.usuario_id', '=', 'usuarios.id')
-                    ->select('caja.*', 'usuarios.name as usuario_nombre')
+                    ->select('caja.*', 'usuarios.nombre as usuario_nombre')
                     ->whereBetween(DB::raw('DATE(caja.created_at)'), [$fechaDesde, $fechaHasta]);
 
             // Aplicar filtros
@@ -47,9 +47,9 @@ class CajaController extends Controller
 
             // Obtener usuarios para el filtro
             $usuarios = DB::table('usuarios')
-                         ->select('id', 'name')
-                         ->where('activo', true)
-                         ->orderBy('name')
+                         ->select('id', 'nombre as name')
+                         ->whereNull('deleted_at')
+                         ->orderBy('nombre')
                          ->get();
 
             return view('caja.index', compact(
@@ -149,6 +149,7 @@ class CajaController extends Controller
                 'usuario_id' => Auth::id(),
                 'tipo' => $request->tipo,
                 'concepto' => $request->concepto,
+                'descripcion' => $request->descripcion,
                 'monto' => $request->monto,
                 'created_at' => now(),
                 'updated_at' => now(),
@@ -202,7 +203,7 @@ class CajaController extends Controller
         try {
             $movimiento = DB::table('caja')
                           ->leftJoin('usuarios', 'caja.usuario_id', '=', 'usuarios.id')
-                          ->select('caja.*', 'usuarios.name as usuario_nombre')
+                          ->select('caja.*', 'usuarios.nombre as usuario_nombre')
                           ->where('caja.id', $id)
                           ->first();
 
@@ -225,7 +226,8 @@ class CajaController extends Controller
                     'monto' => $movimiento->monto,
                     'created_at' => $movimiento->created_at,
                     'usuario' => [
-                        'name' => $movimiento->usuario_nombre ?? 'N/A'
+                        'name' => $movimiento->usuario_nombre ?? 'N/A',
+                        'nombre' => $movimiento->usuario_nombre ?? 'N/A'
                     ],
                     'descripcion' => null,
                     'saldo_posterior' => 0
@@ -431,7 +433,7 @@ class CajaController extends Controller
             // Movimientos del día
             $movimientos = DB::table('caja')
                            ->leftJoin('usuarios', 'caja.usuario_id', '=', 'usuarios.id')
-                           ->select('caja.*', 'usuarios.name as usuario_nombre')
+                           ->select('caja.*', 'usuarios.nombre as usuario_nombre')
                            ->whereDate('caja.created_at', $hoy)
                            ->orderBy('caja.created_at', 'desc')
                            ->get();
