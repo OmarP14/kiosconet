@@ -362,10 +362,40 @@
                         <div class="mb-3">
                             <div id="preview_imagen" class="border rounded p-3" style="min-height: 200px;">
                                 @if(isset($producto) && $producto->imagen)
-                                    <img src="{{ asset('storage/' . $producto->imagen) }}" 
-                                         class="img-fluid rounded" 
-                                         alt="{{ $producto->nombre }}"
-                                         style="max-height: 200px;">
+                                    @php
+                                        // Verificar si la imagen existe con la ruta completa
+                                        $rutaCompleta = public_path('storage/' . $producto->imagen);
+                                        $imagenExiste = file_exists($rutaCompleta);
+
+                                        // Si no existe, intentar sin el timestamp
+                                        if (!$imagenExiste) {
+                                            $nombreSinTimestamp = preg_replace('/^\d+_/', '', basename($producto->imagen));
+                                            $rutaAlternativa = 'storage/productos/' . $nombreSinTimestamp;
+                                            $rutaCompletaAlternativa = public_path($rutaAlternativa);
+                                            if (file_exists($rutaCompletaAlternativa)) {
+                                                $imagenExiste = true;
+                                                $rutaImagen = asset($rutaAlternativa);
+                                            }
+                                        } else {
+                                            $rutaImagen = asset('storage/' . $producto->imagen);
+                                        }
+                                    @endphp
+
+                                    @if($imagenExiste)
+                                        <img src="{{ $rutaImagen }}"
+                                             class="img-fluid rounded"
+                                             alt="{{ $producto->nombre }}"
+                                             style="max-height: 200px;"
+                                             onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                                        <div style="display:none;">
+                                            <i class="fas fa-exclamation-triangle fa-3x text-warning"></i>
+                                            <p class="text-muted mt-2">Error al cargar</p>
+                                        </div>
+                                    @else
+                                        <i class="fas fa-exclamation-triangle fa-3x text-warning"></i>
+                                        <p class="text-muted mt-2">Imagen no encontrada</p>
+                                        <small class="text-danger">{{ basename($producto->imagen) }}</small>
+                                    @endif
                                 @else
                                     <i class="fas fa-image fa-5x text-muted"></i>
                                     <p class="text-muted mt-2">Sin imagen</p>

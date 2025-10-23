@@ -67,11 +67,38 @@ class UsuarioController extends Controller
     {
         try {
             $request->validate([
-                'nombre' => 'required|string|max:255',
+                'nombre' => [
+                    'required',
+                    'string',
+                    'min:3',
+                    'max:100',
+                    'regex:/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/' // Solo letras y espacios
+                ],
                 'email' => 'required|string|email|max:255|unique:usuarios',
-                'usuario' => 'required|string|max:255|unique:usuarios',
-                'password' => 'required|string|min:6|confirmed',
+                'usuario' => [
+                    'required',
+                    'string',
+                    'min:4',
+                    'max:50',
+                    'regex:/^[a-zA-Z0-9._-]+$/', // Alfanumérico, puntos, guiones y guión bajo
+                    'unique:usuarios'
+                ],
+                'password' => 'required|string|min:6|max:50|confirmed',
                 'rol' => 'required|in:administrador,vendedor',
+            ], [
+                // Mensajes personalizados
+                'nombre.required' => 'El nombre es obligatorio',
+                'nombre.min' => 'El nombre debe tener al menos 3 caracteres',
+                'nombre.max' => 'El nombre no puede exceder 100 caracteres',
+                'nombre.regex' => 'El nombre solo puede contener letras y espacios',
+                'usuario.required' => 'El nombre de usuario es obligatorio',
+                'usuario.min' => 'El usuario debe tener al menos 4 caracteres',
+                'usuario.max' => 'El usuario no puede exceder 50 caracteres',
+                'usuario.regex' => 'El usuario solo puede contener letras, números, puntos, guiones y guión bajo',
+                'usuario.unique' => 'Este nombre de usuario ya está en uso',
+                'password.min' => 'La contraseña debe tener al menos 6 caracteres',
+                'password.max' => 'La contraseña no puede exceder 50 caracteres',
+                'password.confirmed' => 'Las contraseñas no coinciden',
             ]);
 
             Usuario::create([
@@ -149,22 +176,43 @@ class UsuarioController extends Controller
     {
         try {
             $request->validate([
-                'nombre' => 'required|string|max:255',
-                'email' => [
-                    'required', 
-                    'string', 
-                    'email', 
-                    'max:255', 
-                    Rule::unique('usuarios')->ignore($usuario->id)
+                'nombre' => [
+                    'required',
+                    'string',
+                    'min:3',
+                    'max:100',
+                    'regex:/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/' // Solo letras y espacios
                 ],
-                'usuario' => [
-                    'required', 
-                    'string', 
+                'email' => [
+                    'required',
+                    'string',
+                    'email',
                     'max:255',
                     Rule::unique('usuarios')->ignore($usuario->id)
                 ],
-                'password' => 'nullable|string|min:6|confirmed',
+                'usuario' => [
+                    'required',
+                    'string',
+                    'min:4',
+                    'max:50',
+                    'regex:/^[a-zA-Z0-9._-]+$/', // Alfanumérico, puntos, guiones y guión bajo
+                    Rule::unique('usuarios')->ignore($usuario->id)
+                ],
+                'password' => 'nullable|string|min:6|max:50|confirmed',
                 'rol' => 'required|in:administrador,vendedor',
+            ], [
+                // Mensajes personalizados
+                'nombre.required' => 'El nombre es obligatorio',
+                'nombre.min' => 'El nombre debe tener al menos 3 caracteres',
+                'nombre.max' => 'El nombre no puede exceder 100 caracteres',
+                'nombre.regex' => 'El nombre solo puede contener letras y espacios',
+                'usuario.required' => 'El nombre de usuario es obligatorio',
+                'usuario.min' => 'El usuario debe tener al menos 4 caracteres',
+                'usuario.max' => 'El usuario no puede exceder 50 caracteres',
+                'usuario.regex' => 'El usuario solo puede contener letras, números, puntos, guiones y guión bajo',
+                'password.min' => 'La contraseña debe tener al menos 6 caracteres',
+                'password.max' => 'La contraseña no puede exceder 50 caracteres',
+                'password.confirmed' => 'Las contraseñas no coinciden',
             ]);
 
             $data = [

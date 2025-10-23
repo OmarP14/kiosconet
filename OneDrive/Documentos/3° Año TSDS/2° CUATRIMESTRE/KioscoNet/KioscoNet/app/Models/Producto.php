@@ -184,7 +184,7 @@ class Producto extends Model
     }
 
     /**
-     * Obtener días hasta vencimiento
+     * Obtener días hasta vencimiento (entero)
      */
     public function diasHastaVencimiento()
     {
@@ -192,7 +192,7 @@ class Producto extends Model
             return null;
         }
 
-        return now()->diffInDays($this->fecha_vencimiento, false);
+        return (int) now()->diffInDays($this->fecha_vencimiento, false);
     }
 
     // ==========================================

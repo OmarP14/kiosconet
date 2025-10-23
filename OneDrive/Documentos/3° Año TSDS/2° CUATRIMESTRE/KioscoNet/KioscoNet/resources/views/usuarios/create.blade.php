@@ -60,17 +60,23 @@
                             <label for="nombre" class="form-label fw-bold">
                                 <i class="fas fa-user me-1"></i>Nombre Completo *
                             </label>
-                            <input type="text" 
-                                   class="form-control @error('nombre') is-invalid @enderror" 
-                                   id="nombre" 
-                                   name="nombre" 
-                                   value="{{ old('nombre') }}" 
+                            <input type="text"
+                                   class="form-control @error('nombre') is-invalid @enderror"
+                                   id="nombre"
+                                   name="nombre"
+                                   value="{{ old('nombre') }}"
                                    placeholder="Ej: Juan Pérez"
+                                   pattern="[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+"
+                                   minlength="3"
+                                   maxlength="100"
                                    required
                                    autofocus>
                             @error('nombre')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
+                            <small class="form-text text-muted">
+                                Solo letras y espacios (mín. 3, máx. 100 caracteres)
+                            </small>
                         </div>
 
                         {{-- EMAIL --}}
@@ -108,18 +114,21 @@
                             <label for="usuario" class="form-label fw-bold">
                                 <i class="fas fa-at me-1"></i>Usuario *
                             </label>
-                            <input type="text" 
-                                   class="form-control @error('usuario') is-invalid @enderror" 
-                                   id="usuario" 
-                                   name="usuario" 
-                                   value="{{ old('usuario') }}" 
+                            <input type="text"
+                                   class="form-control @error('usuario') is-invalid @enderror"
+                                   id="usuario"
+                                   name="usuario"
+                                   value="{{ old('usuario') }}"
                                    placeholder="Ej: juan.perez"
+                                   pattern="[a-zA-Z0-9._-]+"
+                                   minlength="4"
+                                   maxlength="50"
                                    required>
                             @error('usuario')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                             <small class="form-text text-muted">
-                                Nombre de usuario único (sin espacios)
+                                Solo letras, números, puntos, guiones (mín. 4, máx. 50 caracteres)
                             </small>
                         </div>
 
@@ -130,14 +139,16 @@
                                     <i class="fas fa-lock me-1"></i>Contraseña *
                                 </label>
                                 <div class="input-group">
-                                    <input type="password" 
-                                           class="form-control @error('password') is-invalid @enderror" 
-                                           id="password" 
-                                           name="password" 
+                                    <input type="password"
+                                           class="form-control @error('password') is-invalid @enderror"
+                                           id="password"
+                                           name="password"
                                            placeholder="Mínimo 6 caracteres"
+                                           minlength="6"
+                                           maxlength="50"
                                            required>
-                                    <button class="btn btn-outline-secondary" 
-                                            type="button" 
+                                    <button class="btn btn-outline-secondary"
+                                            type="button"
                                             id="togglePassword">
                                         <i class="fas fa-eye"></i>
                                     </button>
@@ -153,14 +164,16 @@
                                     <i class="fas fa-lock me-1"></i>Confirmar Contraseña *
                                 </label>
                                 <div class="input-group">
-                                    <input type="password" 
-                                           class="form-control" 
-                                           id="password_confirmation" 
-                                           name="password_confirmation" 
+                                    <input type="password"
+                                           class="form-control"
+                                           id="password_confirmation"
+                                           name="password_confirmation"
                                            placeholder="Repite la contraseña"
+                                           minlength="6"
+                                           maxlength="50"
                                            required>
-                                    <button class="btn btn-outline-secondary" 
-                                            type="button" 
+                                    <button class="btn btn-outline-secondary"
+                                            type="button"
                                             id="togglePasswordConfirm">
                                         <i class="fas fa-eye"></i>
                                     </button>
@@ -437,19 +450,98 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('usuario').addEventListener('input', actualizarPreview);
     
     // ==========================================
+    // VALIDACIÓN EN TIEMPO REAL - NOMBRE
+    // ==========================================
+    document.getElementById('nombre').addEventListener('input', function(e) {
+        const valor = e.target.value;
+        const regex = /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]*$/;
+
+        if (!regex.test(valor)) {
+            e.target.setCustomValidity('Solo se permiten letras y espacios');
+            e.target.classList.add('is-invalid');
+        } else if (valor.length > 0 && valor.length < 3) {
+            e.target.setCustomValidity('Mínimo 3 caracteres');
+            e.target.classList.add('is-invalid');
+        } else {
+            e.target.setCustomValidity('');
+            e.target.classList.remove('is-invalid');
+            if (valor.length >= 3) {
+                e.target.classList.add('is-valid');
+            }
+        }
+    });
+
+    // ==========================================
+    // VALIDACIÓN EN TIEMPO REAL - USUARIO
+    // ==========================================
+    document.getElementById('usuario').addEventListener('input', function(e) {
+        const valor = e.target.value;
+        const regex = /^[a-zA-Z0-9._-]*$/;
+
+        if (!regex.test(valor)) {
+            e.target.setCustomValidity('Solo letras, números, puntos, guiones y guión bajo');
+            e.target.classList.add('is-invalid');
+        } else if (valor.length > 0 && valor.length < 4) {
+            e.target.setCustomValidity('Mínimo 4 caracteres');
+            e.target.classList.add('is-invalid');
+        } else {
+            e.target.setCustomValidity('');
+            e.target.classList.remove('is-invalid');
+            if (valor.length >= 4) {
+                e.target.classList.add('is-valid');
+            }
+        }
+    });
+
+    // ==========================================
     // VALIDACIÓN DEL FORMULARIO
     // ==========================================
     document.getElementById('usuarioForm').addEventListener('submit', function(e) {
+        const nombre = document.getElementById('nombre').value;
+        const usuario = document.getElementById('usuario').value;
         const password = document.getElementById('password').value;
         const passwordConfirm = document.getElementById('password_confirmation').value;
-        
+
+        // Validar nombre
+        const nombreRegex = /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/;
+        if (!nombreRegex.test(nombre)) {
+            e.preventDefault();
+            alert('El nombre solo puede contener letras y espacios');
+            document.getElementById('nombre').focus();
+            return false;
+        }
+
+        if (nombre.length < 3) {
+            e.preventDefault();
+            alert('El nombre debe tener al menos 3 caracteres');
+            document.getElementById('nombre').focus();
+            return false;
+        }
+
+        // Validar usuario
+        const usuarioRegex = /^[a-zA-Z0-9._-]+$/;
+        if (!usuarioRegex.test(usuario)) {
+            e.preventDefault();
+            alert('El usuario solo puede contener letras, números, puntos, guiones y guión bajo');
+            document.getElementById('usuario').focus();
+            return false;
+        }
+
+        if (usuario.length < 4) {
+            e.preventDefault();
+            alert('El usuario debe tener al menos 4 caracteres');
+            document.getElementById('usuario').focus();
+            return false;
+        }
+
+        // Validar contraseñas
         if (password !== passwordConfirm) {
             e.preventDefault();
             alert('Las contraseñas no coinciden');
             document.getElementById('password_confirmation').focus();
             return false;
         }
-        
+
         if (password.length < 6) {
             e.preventDefault();
             alert('La contraseña debe tener al menos 6 caracteres');

@@ -5,6 +5,7 @@ namespace App\Providers;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Pagination\Paginator;
+use Carbon\Carbon;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -25,5 +26,8 @@ class AppServiceProvider extends ServiceProvider
 
         // Usar Bootstrap 5 para la paginación en lugar de Tailwind
         Paginator::useBootstrapFive();
+
+        // Configurar Carbon para usar español en todas las fechas
+        Carbon::setLocale('es');
     }
 }

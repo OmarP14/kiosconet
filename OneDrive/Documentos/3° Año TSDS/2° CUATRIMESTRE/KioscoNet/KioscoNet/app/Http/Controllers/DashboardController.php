@@ -37,6 +37,27 @@ class DashboardController extends Controller
                 ->get();
 
             // ==========================================
+            // PRODUCTOS PRÓXIMOS A VENCER (Colección - Lista)
+            // ==========================================
+            $productosProximosVencer = Producto::whereNotNull('fecha_vencimiento')
+                ->where('fecha_vencimiento', '<=', Carbon::now()->addDays(30))
+                ->where('fecha_vencimiento', '>=', Carbon::now())
+                ->with('proveedor')
+                ->orderBy('fecha_vencimiento', 'asc')
+                ->limit(10)
+                ->get();
+
+            // ==========================================
+            // PRODUCTOS VENCIDOS
+            // ==========================================
+            $productosVencidos = Producto::whereNotNull('fecha_vencimiento')
+                ->where('fecha_vencimiento', '<', Carbon::now())
+                ->with('proveedor')
+                ->orderBy('fecha_vencimiento', 'desc')
+                ->limit(5)
+                ->get();
+
+            // ==========================================
             // VENTAS RECIENTES (Colección - Últimas 10)
             // ==========================================
             $ventasRecientes = Venta::where('anulada', false)
@@ -61,6 +82,8 @@ class DashboardController extends Controller
             return view('dashboard', compact(
                 'stats',
                 'productosStockBajo',
+                'productosProximosVencer',
+                'productosVencidos',
                 'ventasRecientes',
                 'ventasSemanales',
                 'productosMasVendidos'
@@ -76,6 +99,8 @@ class DashboardController extends Controller
             ];
 
             $productosStockBajo = collect();
+            $productosProximosVencer = collect();
+            $productosVencidos = collect();
             $ventasRecientes = collect();
             $ventasSemanales = ['labels' => [], 'data' => []];
             $productosMasVendidos = ['labels' => [], 'data' => []];
@@ -83,6 +108,8 @@ class DashboardController extends Controller
             return view('dashboard', compact(
                 'stats',
                 'productosStockBajo',
+                'productosProximosVencer',
+                'productosVencidos',
                 'ventasRecientes',
                 'ventasSemanales',
                 'productosMasVendidos'

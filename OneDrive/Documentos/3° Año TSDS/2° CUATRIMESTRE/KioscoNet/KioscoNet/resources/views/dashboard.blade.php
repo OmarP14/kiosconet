@@ -265,6 +265,163 @@
         </div>
     </div>
 </div>
+
+{{-- ALERTAS DE PRODUCTOS POR VENCER --}}
+@if($productosVencidos->count() > 0 || $productosProximosVencer->count() > 0)
+<div class="row mt-4">
+    {{-- PRODUCTOS VENCIDOS --}}
+    @if($productosVencidos->count() > 0)
+    <div class="col-lg-6 mb-4">
+        <div class="alert alert-danger border-0 shadow-sm" role="alert">
+            <div class="d-flex align-items-center">
+                <i class="fas fa-times-circle fa-2x me-3"></i>
+                <div class="flex-grow-1">
+                    <h5 class="alert-heading mb-1">
+                        <i class="fas fa-exclamation-triangle me-2"></i>¡Productos Vencidos!
+                    </h5>
+                    <p class="mb-0">Tiene {{ $productosVencidos->count() }} producto(s) vencido(s)</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm border-start border-danger border-4">
+            <div class="card-header bg-danger bg-opacity-10 py-3">
+                <h6 class="m-0 fw-bold text-danger">
+                    <i class="fas fa-calendar-times me-2"></i>
+                    Productos Vencidos ({{ $productosVencidos->count() }})
+                </h6>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="border-0">Producto</th>
+                                <th class="border-0">Fecha Vencimiento</th>
+                                <th class="border-0">Días Vencido</th>
+                                <th class="border-0">Stock</th>
+                                <th class="border-0">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($productosVencidos as $producto)
+                            @php
+                                $diasVencido = abs($producto->diasHastaVencimiento());
+                            @endphp
+                            <tr class="table-danger">
+                                <td class="fw-bold">
+                                    <i class="fas fa-box text-danger me-2"></i>
+                                    {{ $producto->nombre }}
+                                    @if($producto->codigo)
+                                        <br><small class="text-muted">Código: {{ $producto->codigo }}</small>
+                                    @endif
+                                </td>
+                                <td>
+                                    {{ $producto->fecha_vencimiento->format('d/m/Y') }}
+                                </td>
+                                <td>
+                                    <span class="badge bg-danger">
+                                        <i class="fas fa-exclamation-circle"></i> {{ $diasVencido }} días
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-secondary">{{ $producto->stock }} unidades</span>
+                                </td>
+                                <td>
+                                    <a href="{{ route('productos.edit', $producto->id) }}" class="btn btn-sm btn-outline-danger" title="Gestionar producto">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+
+    {{-- PRODUCTOS PRÓXIMOS A VENCER --}}
+    @if($productosProximosVencer->count() > 0)
+    <div class="col-lg-6 mb-4">
+        <div class="alert alert-warning border-0 shadow-sm" role="alert">
+            <div class="d-flex align-items-center">
+                <i class="fas fa-calendar-exclamation fa-2x me-3"></i>
+                <div class="flex-grow-1">
+                    <h5 class="alert-heading mb-1">
+                        <i class="fas fa-clock me-2"></i>Productos por Vencer
+                    </h5>
+                    <p class="mb-0">Tiene {{ $productosProximosVencer->count() }} producto(s) que vencen en los próximos 30 días</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm border-start border-warning border-4">
+            <div class="card-header bg-warning bg-opacity-10 py-3">
+                <h6 class="m-0 fw-bold text-warning">
+                    <i class="fas fa-calendar-alt me-2"></i>
+                    Próximos a Vencer (30 días) ({{ $productosProximosVencer->count() }})
+                </h6>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="border-0">Producto</th>
+                                <th class="border-0">Fecha Vencimiento</th>
+                                <th class="border-0">Días Restantes</th>
+                                <th class="border-0">Stock</th>
+                                <th class="border-0">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($productosProximosVencer as $producto)
+                            @php
+                                $diasRestantes = $producto->diasHastaVencimiento();
+                                $badgeClass = 'bg-warning';
+                                if ($diasRestantes <= 7) {
+                                    $badgeClass = 'bg-danger';
+                                } elseif ($diasRestantes <= 15) {
+                                    $badgeClass = 'bg-orange';
+                                }
+                            @endphp
+                            <tr class="table-warning">
+                                <td class="fw-bold">
+                                    <i class="fas fa-box text-warning me-2"></i>
+                                    {{ $producto->nombre }}
+                                    @if($producto->codigo)
+                                        <br><small class="text-muted">Código: {{ $producto->codigo }}</small>
+                                    @endif
+                                </td>
+                                <td>
+                                    {{ $producto->fecha_vencimiento->format('d/m/Y') }}
+                                </td>
+                                <td>
+                                    <span class="badge {{ $badgeClass }}">
+                                        <i class="fas fa-clock"></i> {{ $diasRestantes }} días
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-secondary">{{ $producto->stock }} unidades</span>
+                                </td>
+                                <td>
+                                    <a href="{{ route('productos.edit', $producto->id) }}" class="btn btn-sm btn-outline-warning" title="Gestionar producto">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+</div>
+@endif
 @endif
 
 @if(isset($ventasRecientes) && is_object($ventasRecientes) && $ventasRecientes->count() > 0)
@@ -296,7 +453,11 @@
                                 <td class="fw-bold">#{{ $venta->id }}</td>
                                 <td>
                                     <i class="fas fa-user text-muted me-2"></i>
-                                    {{ $venta->cliente->nombre ?? 'Cliente de contado' }}
+                                    @if($venta->cliente)
+                                        {{ $venta->cliente->nombre }} {{ $venta->cliente->apellido }}
+                                    @else
+                                        Cliente de contado
+                                    @endif
                                 </td>
                                 <td>{{ $venta->created_at->format('d/m/Y H:i') }}</td>
                                 <td class="fw-bold text-success">${{ number_format($venta->total, 2) }}</td>

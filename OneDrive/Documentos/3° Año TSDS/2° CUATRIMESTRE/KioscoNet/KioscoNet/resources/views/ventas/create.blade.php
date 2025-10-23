@@ -113,18 +113,25 @@ Sistema de Ventas MEJORADO - Versión con todos los RF implementados
                             <div class="col-12">
                                 <label class="form-label fw-bold">
                                     <i class="fas fa-search me-1"></i>Buscar Producto
+                                    <span class="badge bg-success ms-2" id="barcode-status" style="display: none;">
+                                        <i class="fas fa-check me-1"></i>Lector de código de barras activo
+                                    </span>
                                 </label>
                                 <div class="input-group input-group-lg">
                                     <span class="input-group-text bg-primary text-white">
-                                        <i class="fas fa-barcode"></i>
+                                        <i class="fas fa-barcode" id="barcode-icon"></i>
                                     </span>
-                                    <input type="text" id="buscar-producto" class="form-control" 
-                                           placeholder="Escriba el nombre o código del producto..." 
+                                    <input type="text" id="buscar-producto" class="form-control"
+                                           placeholder="Escanee código de barras o escriba nombre del producto..."
                                            autocomplete="off">
                                     <button class="btn btn-primary" type="button" id="btn-buscar">
                                         <i class="fas fa-search me-1"></i>Buscar
                                     </button>
                                 </div>
+                                <small class="text-muted">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    <strong>Tip:</strong> Enfoque este campo y escanee el código de barras del producto. Se agregará automáticamente.
+                                </small>
                                 <div id="resultados-productos" class="mt-2"></div>
                             </div>
                         </div>
@@ -823,6 +830,44 @@ document.addEventListener('DOMContentLoaded', function() {
     descuentoGlobalInput.addEventListener('input', actualizarTablaProductos);
     document.getElementById('btn-buscar').addEventListener('click', buscarProductos);
     document.getElementById('btn-resumen').addEventListener('click', mostrarResumenVenta);
+
+    // ==========================================
+    // DETECCIÓN DE CÓDIGO DE BARRAS
+    // ==========================================
+    let barcodeBuffer = '';
+    let barcodeTimeout = null;
+
+    buscarInput.addEventListener('keypress', function(e) {
+        // Los lectores de código de barras escriben muy rápido y terminan con Enter
+        if (e.key === 'Enter') {
+            e.preventDefault();
+
+            const codigo = buscarInput.value.trim();
+
+            // Si el valor fue escrito muy rápido (< 100ms por carácter), probablemente sea un escáner
+            if (codigo.length > 3) {
+                buscarPorCodigoBarras(codigo);
+            } else {
+                buscarProductos();
+            }
+        }
+    });
+
+    // Detectar entrada rápida (típico de lectores de código de barras)
+    buscarInput.addEventListener('input', function(e) {
+        const currentTime = new Date().getTime();
+
+        if (barcodeTimeout) {
+            clearTimeout(barcodeTimeout);
+        }
+
+        // Si el texto fue escrito muy rápido, activar indicador visual
+        barcodeTimeout = setTimeout(function() {
+            if (buscarInput.value.length >= 8) {
+                mostrarIndicadorEscaneo(true);
+            }
+        }, 50);
+    });
     
     const montoRecibidoInput = document.getElementById('monto_recibido');
     if (montoRecibidoInput) {
@@ -1045,6 +1090,185 @@ document.addEventListener('DOMContentLoaded', function() {
             resultadosDiv.innerHTML = `<div class="alert alert-danger mb-0">
                 <i class="fas fa-exclamation-circle me-2"></i>Error al buscar productos: ${error.message}
             </div>`;
+        }
+    }
+
+    // ==========================================
+    // BÚSQUEDA POR CÓDIGO DE BARRAS
+    // ==========================================
+    async function buscarPorCodigoBarras(codigo) {
+        const resultadosDiv = document.getElementById('resultados-productos');
+        const listaPrecio = listaPreciosSelect.value;
+
+        try {
+            mostrarIndicadorEscaneo(true);
+
+            // Mostrar indicador de carga
+            resultadosDiv.innerHTML = `<div class="alert alert-info mb-0">
+                <i class="fas fa-barcode me-2"></i>Buscando producto con código: <strong>${codigo}</strong>...
+            </div>`;
+
+            const response = await fetch(`/api/productos/buscar?termino=${encodeURIComponent(codigo)}&lista_precio=${listaPrecio}`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+                    'Accept': 'application/json'
+                }
+            });
+
+            const data = await response.json();
+
+            if (data.success && data.data && data.data.length > 0) {
+                // Encontró producto(s)
+                const productos = data.data;
+
+                // Si hay exactamente un producto, agregarlo directamente
+                if (productos.length === 1) {
+                    const producto = productos[0];
+
+                    // Agregar directamente al carrito
+                    agregarProducto(
+                        producto.id,
+                        producto.nombre,
+                        producto.precio,
+                        producto.stock,
+                        producto.precio_costo
+                    );
+
+                    // Limpiar campo de búsqueda
+                    buscarInput.value = '';
+                    buscarInput.focus();
+
+                    // Limpiar resultados
+                    resultadosDiv.innerHTML = '';
+
+                    // Mostrar alerta de éxito con sonido
+                    mostrarAlerta(`✓ ${producto.nombre} agregado al carrito`, 'success');
+                    reproducirSonidoExito();
+                } else {
+                    // Si hay múltiples coincidencias, mostrarlas
+                    mostrarResultadosProductos(productos, resultadosDiv);
+                }
+            } else {
+                // No encontró el producto
+                resultadosDiv.innerHTML = `<div class="alert alert-warning mb-0">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Producto no encontrado</strong><br>
+                    No se encontró ningún producto con el código: <strong>${codigo}</strong>
+                </div>`;
+                reproducirSonidoError();
+
+                // Limpiar después de 3 segundos
+                setTimeout(() => {
+                    resultadosDiv.innerHTML = '';
+                    buscarInput.value = '';
+                }, 3000);
+            }
+
+            mostrarIndicadorEscaneo(false);
+
+        } catch (error) {
+            console.error('Error al buscar por código de barras:', error);
+            resultadosDiv.innerHTML = `<div class="alert alert-danger mb-0">
+                <i class="fas fa-exclamation-circle me-2"></i>Error al buscar producto: ${error.message}
+            </div>`;
+            mostrarIndicadorEscaneo(false);
+            reproducirSonidoError();
+        }
+    }
+
+    // Mostrar resultados de productos (cuando hay múltiples coincidencias)
+    function mostrarResultadosProductos(productos, resultadosDiv) {
+        let html = '<div class="list-group">';
+
+        productos.forEach(producto => {
+            const stockClass = producto.stock > 0 ? 'text-success' : 'text-danger';
+            const stockIcon = producto.stock > 0 ? 'fa-check-circle' : 'fa-times-circle';
+
+            html += `
+                <button type="button" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center"
+                        onclick="agregarProducto(${producto.id}, '${producto.nombre.replace(/'/g, "\\'")}', ${producto.precio}, ${producto.stock}, ${producto.precio_costo || 0})">
+                    <div>
+                        <h6 class="mb-1">${producto.nombre}</h6>
+                        <small class="text-muted">Código: ${producto.codigo || 'N/A'}</small>
+                    </div>
+                    <div class="text-end">
+                        <div class="fw-bold">${formatearMoneda(producto.precio)}</div>
+                        <small class="${stockClass}">
+                            <i class="fas ${stockIcon}"></i> Stock: ${producto.stock}
+                        </small>
+                    </div>
+                </button>
+            `;
+        });
+
+        html += '</div>';
+        resultadosDiv.innerHTML = html;
+    }
+
+    // Mostrar indicador visual de escaneo
+    function mostrarIndicadorEscaneo(activo) {
+        const statusBadge = document.getElementById('barcode-status');
+        const barcodeIcon = document.getElementById('barcode-icon');
+
+        if (activo) {
+            if (statusBadge) statusBadge.style.display = 'inline-block';
+            if (barcodeIcon) barcodeIcon.classList.add('fa-spin');
+        } else {
+            if (statusBadge) {
+                setTimeout(() => {
+                    statusBadge.style.display = 'none';
+                }, 2000);
+            }
+            if (barcodeIcon) barcodeIcon.classList.remove('fa-spin');
+        }
+    }
+
+    // Reproducir sonido de éxito (opcional)
+    function reproducirSonidoExito() {
+        // Crear un sonido simple con Web Audio API
+        try {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+
+            oscillator.frequency.value = 800;
+            oscillator.type = 'sine';
+
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.1);
+        } catch (e) {
+            console.log('Audio no disponible');
+        }
+    }
+
+    // Reproducir sonido de error (opcional)
+    function reproducirSonidoError() {
+        try {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+
+            oscillator.frequency.value = 200;
+            oscillator.type = 'sawtooth';
+
+            gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.2);
+        } catch (e) {
+            console.log('Audio no disponible');
         }
     }
 

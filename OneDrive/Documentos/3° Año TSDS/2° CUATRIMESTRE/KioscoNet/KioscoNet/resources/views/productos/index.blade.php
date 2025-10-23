@@ -11,6 +11,9 @@
                     <i class="fas fa-boxes"></i> Gestión de Productos
                 </h1>
                 <div>
+                    <button type="button" class="btn btn-info me-2" id="btn-imprimir-etiquetas" style="display: none;">
+                        <i class="fas fa-print"></i> Imprimir Etiquetas (<span id="count-selected">0</span>)
+                    </button>
                     <a href="{{ route('productos.stock-bajo') }}" class="btn btn-warning me-2">
                         <i class="fas fa-exclamation-triangle"></i> Stock Bajo
                     </a>
@@ -179,6 +182,9 @@
                 <table class="table table-hover">
                     <thead class="table-light">
                         <tr>
+                            <th style="width: 40px;">
+                                <input type="checkbox" class="form-check-input" id="select-all">
+                            </th>
                             <th>Producto</th>
                             <th>Categoría</th>
                             <th>Proveedor</th>
@@ -192,6 +198,16 @@
                     <tbody>
                         @foreach($productos as $producto)
                         <tr class="{{ !$producto->activo ? 'table-secondary' : '' }}">
+                            <td>
+                                <input type="checkbox" class="form-check-input producto-checkbox"
+                                       value="{{ $producto->id }}"
+                                       data-nombre="{{ $producto->nombre }}"
+                                       data-codigo="{{ $producto->codigo ?? '' }}"
+                                       data-precio="{{ $producto->getPrecioVenta(40) }}"
+                                       data-categoria="{{ $producto->categoria ?? '' }}"
+                                       data-proveedor="{{ $producto->proveedor->nombre ?? '' }}"
+                                       data-vencimiento="{{ $producto->fecha_vencimiento ? $producto->fecha_vencimiento->format('Y-m-d') : '' }}">
+                            </td>
                             <td>
                                 <div>
                                     <strong>{{ $producto->nombre }}</strong>
@@ -442,13 +458,274 @@ $(document).ready(function() {
     $('#stock_nuevo').on('input', function() {
         const stockActual = parseInt($('#stock_actual').val());
         const stockNuevo = parseInt($(this).val());
-        
+
         if (stockNuevo !== stockActual && !$('#motivo_ajuste').val().trim()) {
             $('#motivo_ajuste').attr('required', true);
         } else {
             $('#motivo_ajuste').removeAttr('required');
         }
     });
+
+    // ==========================================
+    // SELECCIÓN MÚLTIPLE DE PRODUCTOS
+    // ==========================================
+    const btnImprimirEtiquetas = document.getElementById('btn-imprimir-etiquetas');
+    const countSelected = document.getElementById('count-selected');
+    const selectAll = document.getElementById('select-all');
+    const productosCheckboxes = document.querySelectorAll('.producto-checkbox');
+
+    // Seleccionar/Deseleccionar todos
+    selectAll.addEventListener('change', function() {
+        productosCheckboxes.forEach(checkbox => {
+            checkbox.checked = this.checked;
+        });
+        actualizarContadorSeleccionados();
+    });
+
+    // Actualizar contador al seleccionar individual
+    productosCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', actualizarContadorSeleccionados);
+    });
+
+    function actualizarContadorSeleccionados() {
+        const seleccionados = document.querySelectorAll('.producto-checkbox:checked');
+        const count = seleccionados.length;
+
+        countSelected.textContent = count;
+
+        if (count > 0) {
+            btnImprimirEtiquetas.style.display = 'inline-block';
+        } else {
+            btnImprimirEtiquetas.style.display = 'none';
+        }
+
+        // Actualizar estado del checkbox "Seleccionar todos"
+        selectAll.checked = count === productosCheckboxes.length && count > 0;
+    }
+
+    // ==========================================
+    // IMPRIMIR ETIQUETAS MASIVAMENTE
+    // ==========================================
+    btnImprimirEtiquetas.addEventListener('click', function() {
+        const seleccionados = document.querySelectorAll('.producto-checkbox:checked');
+
+        if (seleccionados.length === 0) {
+            alert('Por favor seleccione al menos un producto');
+            return;
+        }
+
+        // Recopilar datos de productos seleccionados
+        const productos = [];
+        seleccionados.forEach(checkbox => {
+            productos.push({
+                id: checkbox.value,
+                nombre: checkbox.dataset.nombre,
+                codigo: checkbox.dataset.codigo,
+                precio: checkbox.dataset.precio,
+                categoria: checkbox.dataset.categoria,
+                proveedor: checkbox.dataset.proveedor,
+                vencimiento: checkbox.dataset.vencimiento
+            });
+        });
+
+        // Abrir ventana de impresión con etiquetas
+        imprimirEtiquetasMasivas(productos);
+    });
+
+    function imprimirEtiquetasMasivas(productos) {
+        // Crear ventana emergente para impresión
+        const ventanaImpresion = window.open('', '_blank', 'width=800,height=600');
+
+        let html = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Etiquetas de Productos</title>
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></scr` + `ipt>
+    <style>
+        @page {
+            size: A4;
+            margin: 1cm;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        .etiquetas-container {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10mm;
+            padding: 5mm;
+        }
+
+        .etiqueta {
+            width: 90mm;
+            height: 55mm;
+            padding: 5mm;
+            border: 2px solid #000;
+            background-color: #fff;
+            page-break-inside: avoid;
+            box-sizing: border-box;
+        }
+
+        .etiqueta-header {
+            text-align: center;
+            background-color: #000;
+            color: #fff;
+            padding: 3mm;
+            margin: -5mm -5mm 3mm -5mm;
+        }
+
+        .etiqueta-header h3 {
+            margin: 0;
+            font-size: 12pt;
+        }
+
+        .producto-nombre {
+            text-align: center;
+            font-size: 10pt;
+            font-weight: bold;
+            margin: 2mm 0;
+            min-height: 12mm;
+        }
+
+        .barcode-container {
+            text-align: center;
+            margin: 2mm 0;
+        }
+
+        .barcode-container svg {
+            width: 100%;
+            height: auto;
+        }
+
+        .codigo-texto {
+            text-align: center;
+            font-size: 8pt;
+            font-weight: bold;
+            margin: 1mm 0;
+        }
+
+        .precio-container {
+            border: 3px solid #000;
+            padding: 3mm;
+            text-align: center;
+            margin: 2mm 0;
+        }
+
+        .precio-label {
+            font-size: 9pt;
+            font-weight: bold;
+        }
+
+        .precio-valor {
+            font-size: 20pt;
+            font-weight: bold;
+        }
+
+        .info-adicional {
+            font-size: 7pt;
+            margin-top: 2mm;
+        }
+
+        .info-adicional p {
+            margin: 1mm 0;
+        }
+
+        @media print {
+            body {
+                margin: 0;
+                padding: 0;
+            }
+
+            .etiqueta {
+                page-break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="etiquetas-container">
+`;
+
+        // Generar cada etiqueta
+        productos.forEach((producto, index) => {
+            html += `
+        <div class="etiqueta">
+            <div class="etiqueta-header">
+                <h3>KIOSCONET</h3>
+            </div>
+            <div class="producto-nombre">${producto.nombre.toUpperCase()}</div>
+            ${producto.codigo ? `
+            <div class="barcode-container">
+                <svg id="barcode-${index}"></svg>
+            </div>
+            <div class="codigo-texto">${producto.codigo}</div>
+            ` : '<div class="codigo-texto" style="color: #999;">Sin código</div>'}
+            <div class="precio-container">
+                <div class="precio-label">PRECIO</div>
+                <div class="precio-valor">$${parseFloat(producto.precio).toFixed(2)}</div>
+            </div>
+            <div class="info-adicional">
+                ${producto.categoria ? `<p><strong>Categoría:</strong> ${producto.categoria}</p>` : ''}
+                ${producto.proveedor ? `<p><strong>Proveedor:</strong> ${producto.proveedor}</p>` : ''}
+                ${producto.vencimiento ? `<p><strong>Vence:</strong> ${formatearFecha(producto.vencimiento)}</p>` : ''}
+            </div>
+        </div>
+`;
+        });
+
+        html += `
+    </div>
+    <scr` + `ipt>
+        // Generar códigos de barras
+        document.addEventListener('DOMContentLoaded', function() {
+`;
+
+        productos.forEach((producto, index) => {
+            if (producto.codigo) {
+                html += `
+            try {
+                JsBarcode("#barcode-${index}", "${producto.codigo}", {
+                    format: "CODE128",
+                    width: 1.5,
+                    height: 40,
+                    displayValue: false,
+                    margin: 2,
+                    background: "#ffffff",
+                    lineColor: "#000000"
+                });
+            } catch(e) {
+                console.error('Error generando código de barras ${index}:', e);
+            }
+`;
+            }
+        });
+
+        html += `
+            // Imprimir automáticamente después de cargar
+            setTimeout(function() {
+                window.print();
+            }, 500);
+        });
+
+        function formatearFecha(fecha) {
+            if (!fecha) return '';
+            const partes = fecha.split('-');
+            return partes[2] + '/' + partes[1] + '/' + partes[0];
+        }
+    </scr` + `ipt>
+</body>
+</html>
+`;
+
+        ventanaImpresion.document.write(html);
+        ventanaImpresion.document.close();
+    }
 });
 </script>
 @endpush

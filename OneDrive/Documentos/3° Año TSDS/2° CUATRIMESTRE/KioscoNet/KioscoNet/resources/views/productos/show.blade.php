@@ -97,7 +97,7 @@
                                     {{ $producto->fecha_vencimiento->format('d/m/Y') }}
                                     @php
                                         $diasRestantes = $producto->fecha_vencimiento->diffInDays(now(), false);
-                                        $diasRestantes = -$diasRestantes;
+                                        $diasRestantes = (int) -$diasRestantes; // Convertir a entero
                                     @endphp
                                     @if($diasRestantes <= 0)
                                         <span class="badge bg-danger">Vencido</span>
@@ -113,10 +113,38 @@
 
                         <div class="col-md-4 text-center">
                             @if($producto->imagen)
-                                <img src="{{ asset('storage/' . $producto->imagen) }}" 
-                                     class="img-fluid rounded shadow" 
-                                     alt="{{ $producto->nombre }}"
-                                     style="max-height: 200px;">
+                                @php
+                                    // Verificar si la imagen existe con la ruta completa
+                                    $rutaCompleta = public_path('storage/' . $producto->imagen);
+                                    $imagenExiste = file_exists($rutaCompleta);
+
+                                    // Si no existe, intentar sin el timestamp
+                                    if (!$imagenExiste) {
+                                        $nombreSinTimestamp = preg_replace('/^\d+_/', '', basename($producto->imagen));
+                                        $rutaAlternativa = 'storage/productos/' . $nombreSinTimestamp;
+                                        $rutaCompletaAlternativa = public_path($rutaAlternativa);
+                                        if (file_exists($rutaCompletaAlternativa)) {
+                                            $imagenExiste = true;
+                                            $rutaImagen = asset($rutaAlternativa);
+                                        }
+                                    } else {
+                                        $rutaImagen = asset('storage/' . $producto->imagen);
+                                    }
+                                @endphp
+
+                                @if($imagenExiste)
+                                    <img src="{{ $rutaImagen }}"
+                                         class="img-fluid rounded shadow"
+                                         alt="{{ $producto->nombre }}"
+                                         style="max-height: 200px;"
+                                         onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\'border rounded p-4 bg-light\'><i class=\'fas fa-exclamation-triangle fa-3x text-warning\'></i><p class=\'text-muted mt-2 mb-0\'>Error al cargar imagen</p><small class=\'text-danger\'>{{ basename($producto->imagen) }}</small></div>';">
+                                @else
+                                    <div class="border rounded p-4 bg-warning bg-opacity-10">
+                                        <i class="fas fa-exclamation-triangle fa-3x text-warning"></i>
+                                        <p class="text-muted mt-2 mb-0">Imagen no encontrada</p>
+                                        <small class="text-danger d-block">{{ $producto->imagen }}</small>
+                                    </div>
+                                @endif
                             @else
                                 <div class="border rounded p-4 bg-light">
                                     <i class="fas fa-image fa-5x text-muted"></i>
@@ -440,6 +468,81 @@
     </div>
 </div>
 
+{{-- ETIQUETA PARA IMPRESIÓN (OCULTA EN PANTALLA) --}}
+<div id="etiqueta-producto" style="display: none;">
+    <div style="width: 10cm; padding: 20px; font-family: Arial, sans-serif; border: 3px solid #000; background-color: #fff; color: #000;">
+        {{-- ENCABEZADO --}}
+        <div style="text-align: center; border-bottom: 3px solid #000; padding-bottom: 10px; margin-bottom: 15px; background-color: #000; color: #fff; padding: 10px;">
+            <h2 style="margin: 0; font-size: 24px; font-weight: bold; color: #fff;">KIOSCONET</h2>
+            <p style="margin: 5px 0 0 0; font-size: 12px; color: #fff;">Sistema de Gestión</p>
+        </div>
+
+        {{-- INFORMACIÓN DEL PRODUCTO --}}
+        <div style="margin-bottom: 15px;">
+            <h3 style="margin: 0 0 10px 0; font-size: 20px; text-align: center; font-weight: bold; color: #000;">
+                {{ strtoupper($producto->nombre) }}
+            </h3>
+
+            @if($producto->codigo)
+            {{-- CÓDIGO DE BARRAS --}}
+            <div style="text-align: center; margin: 15px 0;">
+                <svg id="barcode-svg" style="width: 100%; height: auto;"></svg>
+            </div>
+            <div style="text-align: center; margin-bottom: 10px;">
+                <p style="margin: 0; font-size: 14px; color: #000; font-weight: bold;">
+                    {{ $producto->codigo }}
+                </p>
+            </div>
+            @else
+            <div style="text-align: center; margin-bottom: 10px;">
+                <p style="margin: 0; font-size: 14px; color: #999; font-style: italic;">
+                    Sin código de barras
+                </p>
+            </div>
+            @endif
+        </div>
+
+        {{-- PRECIO --}}
+        @php
+            $precioVenta = $producto->getPrecioVenta(40);
+        @endphp
+        <div style="border: 4px solid #000; padding: 20px; margin-bottom: 15px; background-color: #fff; text-align: center;">
+            <p style="margin: 0; font-size: 18px; font-weight: bold; color: #000;">PRECIO</p>
+            <p style="margin: 10px 0 0 0; font-size: 48px; font-weight: bold; color: #000;">
+                ${{ number_format($precioVenta, 2) }}
+            </p>
+        </div>
+
+        {{-- INFORMACIÓN ADICIONAL --}}
+        <div style="font-size: 14px; line-height: 1.8; color: #000;">
+            @if($producto->categoria)
+            <p style="margin: 8px 0; color: #000;">
+                <strong>Categoría:</strong> {{ $producto->categoria }}
+            </p>
+            @endif
+
+            @if($producto->proveedor)
+            <p style="margin: 8px 0; color: #000;">
+                <strong>Proveedor:</strong> {{ $producto->proveedor->nombre }}
+            </p>
+            @endif
+
+            @if($producto->fecha_vencimiento)
+            <p style="margin: 8px 0; color: #000;">
+                <strong>Vence:</strong> {{ $producto->fecha_vencimiento->format('d/m/Y') }}
+            </p>
+            @endif
+        </div>
+
+        {{-- PIE DE PÁGINA --}}
+        <div style="border-top: 2px solid #000; margin-top: 15px; padding-top: 10px; text-align: center;">
+            <p style="margin: 0; font-size: 11px; color: #000;">
+                Impreso: {{ now()->format('d/m/Y H:i') }}
+            </p>
+        </div>
+    </div>
+</div>
+
 {{-- MODAL AJUSTAR STOCK --}}
 <div class="modal fade" id="ajustarStockModal" tabindex="-1">
     <div class="modal-dialog">
@@ -513,9 +616,45 @@ function eliminarProducto(productoId, nombre) {
 }
 
 function imprimirEtiqueta() {
-    window.print();
+    // Generar código de barras antes de imprimir
+    @if($producto->codigo)
+    generarCodigoBarras();
+    @endif
+
+    // Pequeño delay para que el código de barras se genere
+    setTimeout(function() {
+        window.print();
+    }, 100);
 }
+
+// Función para generar código de barras
+function generarCodigoBarras() {
+    @if($producto->codigo)
+    try {
+        JsBarcode("#barcode-svg", "{{ $producto->codigo }}", {
+            format: "CODE128",
+            width: 2,
+            height: 60,
+            displayValue: false, // No mostrar el texto debajo del código (ya lo mostramos aparte)
+            margin: 5,
+            background: "#ffffff",
+            lineColor: "#000000"
+        });
+    } catch (e) {
+        console.error("Error generando código de barras:", e);
+    }
+    @endif
+}
+
+// Generar código de barras al cargar la página (para vista previa)
+document.addEventListener('DOMContentLoaded', function() {
+    generarCodigoBarras();
+});
 </script>
+
+<!-- JsBarcode Library -->
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+
 @endpush
 
 @push('styles')
@@ -534,16 +673,28 @@ function imprimirEtiqueta() {
 }
 
 @media print {
+    /* Ocultar todo el contenido de la página */
     body * {
         visibility: hidden;
     }
-    #etiqueta-producto, #etiqueta-producto * {
-        visibility: visible;
-    }
+
+    /* Mostrar solo la etiqueta */
     #etiqueta-producto {
+        display: block !important;
+        visibility: visible !important;
         position: absolute;
         left: 0;
         top: 0;
+        width: 100%;
+    }
+
+    #etiqueta-producto * {
+        visibility: visible !important;
+    }
+
+    /* Ocultar elementos innecesarios */
+    .navbar, .sidebar, .btn, .card, .modal {
+        display: none !important;
     }
 }
 </style>

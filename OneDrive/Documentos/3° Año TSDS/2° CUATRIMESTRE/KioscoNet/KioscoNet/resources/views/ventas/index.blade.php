@@ -108,7 +108,11 @@
                             <td>{{ $venta->created_at->format('d/m/Y H:i') }}</td>
                             <td>
                                 <i class="fas fa-user text-muted me-2"></i>
-                                {{ optional($venta->cliente)->nombre ?? 'Cliente de Contado' }}
+                                @if($venta->cliente)
+                                    {{ $venta->cliente->nombre }} {{ $venta->cliente->apellido }}
+                                @else
+                                    Cliente de Contado
+                                @endif
                             </td>
                             <td>
                                 @php
