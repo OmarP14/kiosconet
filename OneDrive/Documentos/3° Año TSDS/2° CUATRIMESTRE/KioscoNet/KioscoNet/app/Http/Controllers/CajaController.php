@@ -429,7 +429,7 @@ class CajaController extends Controller
     {
         try {
             $hoy = now()->toDateString();
-            
+
             // Movimientos del día
             $movimientos = DB::table('caja')
                            ->leftJoin('usuarios', 'caja.usuario_id', '=', 'usuarios.id')
@@ -440,32 +440,101 @@ class CajaController extends Controller
 
             $ingresos = $movimientos->where('tipo', 'ingreso');
             $egresos = $movimientos->where('tipo', 'egreso');
-            
+
             $totalIngresos = $ingresos->sum('monto');
             $totalEgresos = $egresos->sum('monto');
             $saldoDelDia = $totalIngresos - $totalEgresos;
             $saldoActual = $this->calcularSaldoActual();
 
-            // Ventas del día (desde la tabla ventas)
-            $ventasHoy = DB::table('ventas')
-                          ->whereDate('created_at', $hoy)
-                          ->sum('total') ?? 0;
-                          
-            $ventasEfectivo = DB::table('ventas')
-                            ->whereDate('created_at', $hoy)
-                            ->where('metodo_pago', 'efectivo')
-                            ->sum('total') ?? 0;
+            // ✅ NUEVO: Desglose de ventas por método de pago
+            $ventasPorMetodo = DB::table('ventas')
+                ->whereDate('fecha_venta', $hoy)
+                ->where('anulada', false)
+                ->select('metodo_pago', DB::raw('SUM(total) as total'))
+                ->groupBy('metodo_pago')
+                ->get()
+                ->keyBy('metodo_pago');
+
+            // Calcular totales por método
+            $ventasEfectivo = $ventasPorMetodo->get('efectivo')->total ?? 0;
+            $ventasTarjeta = $ventasPorMetodo->get('tarjeta')->total ?? 0;
+            $ventasTransferencia = $ventasPorMetodo->get('transferencia')->total ?? 0;
+            $ventasCC = ($ventasPorMetodo->get('cuenta_corriente')->total ?? 0) + ($ventasPorMetodo->get('cc')->total ?? 0);
+            $ventasMixto = $ventasPorMetodo->get('mixto')->total ?? 0;
+
+            // Para pagos mixtos, desglosar por método
+            $mixtoDesglose = [
+                'efectivo' => 0,
+                'tarjeta' => 0,
+                'transferencia' => 0,
+            ];
+
+            if ($ventasMixto > 0) {
+                $pagosMixtos = DB::table('pagos_mixtos')
+                    ->join('ventas', 'pagos_mixtos.venta_id', '=', 'ventas.id')
+                    ->whereDate('ventas.fecha_venta', $hoy)
+                    ->where('ventas.anulada', false)
+                    ->select('pagos_mixtos.metodo_pago', DB::raw('SUM(pagos_mixtos.monto) as total'))
+                    ->groupBy('pagos_mixtos.metodo_pago')
+                    ->get();
+
+                foreach ($pagosMixtos as $pago) {
+                    if (isset($mixtoDesglose[$pago->metodo_pago])) {
+                        $mixtoDesglose[$pago->metodo_pago] = $pago->total;
+                    }
+                }
+            }
+
+            // Sumar pagos mixtos al total por método
+            $ventasEfectivo += $mixtoDesglose['efectivo'];
+            $ventasTarjeta += $mixtoDesglose['tarjeta'];
+            $ventasTransferencia += $mixtoDesglose['transferencia'];
+
+            // Total de ventas
+            $ventasHoy = $ventasEfectivo + $ventasTarjeta + $ventasTransferencia + $ventasCC;
+
+            // ✅ NUEVO: Calcular efectivo esperado en caja
+            // Solo efectivo de ventas + otros ingresos en efectivo - egresos
+            $efectivoEsperado = $ventasEfectivo;
+
+            // Sumar otros ingresos en efectivo (que no son de ventas)
+            $otrosIngresosEfectivo = DB::table('caja')
+                ->whereDate('created_at', $hoy)
+                ->where('tipo', 'ingreso')
+                ->whereNotIn('descripcion', function($query) {
+                    $query->select(DB::raw("CONCAT('Venta ', numero, ' - EFECTIVO')"))
+                          ->from('ventas');
+                })
+                ->sum('monto') ?? 0;
+
+            $efectivoEsperado += $otrosIngresosEfectivo;
+
+            // Restar egresos en efectivo
+            $egresosEfectivo = DB::table('caja')
+                ->whereDate('created_at', $hoy)
+                ->where('tipo', 'egreso')
+                ->sum('monto') ?? 0;
+
+            $efectivoEsperado -= $egresosEfectivo;
 
             return view('caja.arqueo', compact(
                 'movimientos',
-                'ingresos', 
+                'ingresos',
                 'egresos',
                 'totalIngresos',
                 'totalEgresos',
                 'saldoDelDia',
                 'saldoActual',
                 'ventasHoy',
-                'ventasEfectivo'
+                'ventasEfectivo',
+                'ventasTarjeta',
+                'ventasTransferencia',
+                'ventasCC',
+                'ventasMixto',
+                'mixtoDesglose',
+                'efectivoEsperado',
+                'otrosIngresosEfectivo',
+                'egresosEfectivo'
             ));
 
         } catch (\Exception $e) {
@@ -484,7 +553,15 @@ class CajaController extends Controller
                 'saldoDelDia' => 0,
                 'saldoActual' => 0,
                 'ventasHoy' => 0,
-                'ventasEfectivo' => 0
+                'ventasEfectivo' => 0,
+                'ventasTarjeta' => 0,
+                'ventasTransferencia' => 0,
+                'ventasCC' => 0,
+                'ventasMixto' => 0,
+                'mixtoDesglose' => ['efectivo' => 0, 'tarjeta' => 0, 'transferencia' => 0],
+                'efectivoEsperado' => 0,
+                'otrosIngresosEfectivo' => 0,
+                'egresosEfectivo' => 0
             ])->withErrors(['error' => 'Error al cargar el arqueo de caja.']);
         }
     }

@@ -164,7 +164,8 @@ class ProductoController extends Controller
      */
     public function stockBajo()
     {
-        $productos = Producto::stockBajo()
+        $productos = Producto::query()
+            ->stockBajo()
             ->with('proveedor')
             ->orderBy('stock', 'asc')
             ->paginate(15);

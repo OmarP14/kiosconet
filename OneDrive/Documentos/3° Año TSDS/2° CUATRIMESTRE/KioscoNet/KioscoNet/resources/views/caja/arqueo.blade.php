@@ -72,7 +72,7 @@
                                 </h4>
                                 <small class="text-muted">Ventas del Día</small>
                                 <br>
-                                <small class="badge bg-info">Efectivo: ${{ number_format($ventasEfectivo, 2) }}</small>
+                                <small class="badge bg-info">Todas las ventas</small>
                             </div>
                         </div>
                         <div class="col-md-3">
@@ -86,6 +86,104 @@
                                 <small class="badge bg-primary">Neto: I - E</small>
                             </div>
                         </div>
+                    </div>
+                </div>
+            </div>
+
+            {{-- ✅ NUEVO: DESGLOSE POR MÉTODO DE PAGO --}}
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-gradient text-white" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                    <h5 class="mb-0">
+                        <i class="fas fa-credit-card me-2"></i>Desglose por Método de Pago
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {{-- EFECTIVO --}}
+                        <div class="col-md-3 mb-3">
+                            <div class="border rounded p-3 h-100" style="background-color: #f0f9ff;">
+                                <div class="d-flex align-items-center mb-2">
+                                    <i class="fas fa-money-bill-wave fa-2x text-success me-2"></i>
+                                    <div>
+                                        <small class="text-muted d-block">💵 EFECTIVO</small>
+                                        <h5 class="mb-0 text-success">${{ number_format($ventasEfectivo, 2) }}</h5>
+                                    </div>
+                                </div>
+                                <small class="text-muted">
+                                    <i class="fas fa-info-circle"></i> Debe estar en caja física
+                                </small>
+                            </div>
+                        </div>
+
+                        {{-- TARJETA --}}
+                        <div class="col-md-3 mb-3">
+                            <div class="border rounded p-3 h-100" style="background-color: #fff4e6;">
+                                <div class="d-flex align-items-center mb-2">
+                                    <i class="fas fa-credit-card fa-2x text-primary me-2"></i>
+                                    <div>
+                                        <small class="text-muted d-block">💳 TARJETA</small>
+                                        <h5 class="mb-0 text-primary">${{ number_format($ventasTarjeta, 2) }}</h5>
+                                    </div>
+                                </div>
+                                <small class="text-muted">
+                                    <i class="fas fa-university"></i> Va a cuenta bancaria
+                                </small>
+                            </div>
+                        </div>
+
+                        {{-- TRANSFERENCIA --}}
+                        <div class="col-md-3 mb-3">
+                            <div class="border rounded p-3 h-100" style="background-color: #f0fff4;">
+                                <div class="d-flex align-items-center mb-2">
+                                    <i class="fas fa-exchange-alt fa-2x text-info me-2"></i>
+                                    <div>
+                                        <small class="text-muted d-block">🏦 TRANSFERENCIA</small>
+                                        <h5 class="mb-0 text-info">${{ number_format($ventasTransferencia, 2) }}</h5>
+                                    </div>
+                                </div>
+                                <small class="text-muted">
+                                    <i class="fas fa-university"></i> Va a cuenta bancaria
+                                </small>
+                            </div>
+                        </div>
+
+                        {{-- CUENTA CORRIENTE --}}
+                        <div class="col-md-3 mb-3">
+                            <div class="border rounded p-3 h-100" style="background-color: #fef3f2;">
+                                <div class="d-flex align-items-center mb-2">
+                                    <i class="fas fa-file-invoice-dollar fa-2x text-warning me-2"></i>
+                                    <div>
+                                        <small class="text-muted d-block">📋 CUENTA CORRIENTE</small>
+                                        <h5 class="mb-0 text-warning">${{ number_format($ventasCC, 2) }}</h5>
+                                    </div>
+                                </div>
+                                <small class="text-muted">
+                                    <i class="fas fa-handshake"></i> Crédito a clientes
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+
+                    @if($ventasMixto > 0)
+                    <div class="alert alert-info mt-3 mb-0">
+                        <strong><i class="fas fa-coins"></i> Pagos Mixtos:</strong> ${{ number_format($ventasMixto, 2) }}
+                        <br>
+                        <small>
+                            Desglosados:
+                            Efectivo ${{ number_format($mixtoDesglose['efectivo'], 2) }} |
+                            Tarjeta ${{ number_format($mixtoDesglose['tarjeta'], 2) }} |
+                            Transferencia ${{ number_format($mixtoDesglose['transferencia'], 2) }}
+                        </small>
+                    </div>
+                    @endif
+
+                    <hr class="my-3">
+                    <div class="text-center">
+                        <h5 class="mb-1">
+                            <strong>TOTAL VENTAS:</strong>
+                            <span class="text-primary">${{ number_format($ventasHoy, 2) }}</span>
+                        </h5>
+                        <small class="text-muted">Suma de todos los métodos de pago</small>
                     </div>
                 </div>
             </div>
@@ -215,42 +313,94 @@
                 </div>
             </div>
 
+            {{-- ✅ NUEVO: CÁLCULO DE EFECTIVO ESPERADO --}}
+            <div class="card shadow-sm mb-4 border-success">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-calculator me-2"></i>
+                        💵 Efectivo Esperado en Caja
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm mb-0">
+                            <tbody>
+                                <tr>
+                                    <td><i class="fas fa-plus text-success"></i> Ventas en Efectivo</td>
+                                    <td class="text-end text-success">+${{ number_format($ventasEfectivo, 2) }}</td>
+                                </tr>
+                                <tr>
+                                    <td><i class="fas fa-plus text-success"></i> Otros Ingresos en Efectivo</td>
+                                    <td class="text-end text-success">+${{ number_format($otrosIngresosEfectivo, 2) }}</td>
+                                </tr>
+                                <tr>
+                                    <td><i class="fas fa-minus text-danger"></i> Egresos en Efectivo</td>
+                                    <td class="text-end text-danger">-${{ number_format($egresosEfectivo, 2) }}</td>
+                                </tr>
+                                <tr class="table-success">
+                                    <th><strong>EFECTIVO QUE DEBE HABER:</strong></th>
+                                    <th class="text-end">
+                                        <h5 class="mb-0 text-success">
+                                            ${{ number_format($efectivoEsperado, 2) }}
+                                        </h5>
+                                    </th>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="alert alert-warning mt-3 mb-0">
+                        <small>
+                            <i class="fas fa-info-circle"></i>
+                            <strong>Importante:</strong> Solo cuenta el <strong>efectivo físico</strong> (billetes y monedas).
+                            No incluyas tarjeta, transferencias ni MercadoPago.
+                        </small>
+                    </div>
+                </div>
+            </div>
+
             {{-- FORMULARIO DE CIERRE --}}
             <div class="card shadow-sm mb-4">
                 <div class="card-header bg-warning text-dark">
                     <h5 class="mb-0">
                         <i class="fas fa-hand-holding-usd me-2"></i>
-                        Conteo Físico
+                        Conteo Físico de Efectivo
                     </h5>
                 </div>
                 <div class="card-body">
                     <form id="cierreForm" method="POST" action="{{ route('caja.cerrarCaja') }}">
                         @csrf
-                        
+
                         <div class="mb-3">
                             <label for="monto_fisico" class="form-label fw-bold">
-                                💵 Dinero Contado en Caja *
+                                💵 Efectivo Contado en Caja *
                             </label>
                             <div class="input-group input-group-lg">
-                                <span class="input-group-text">$</span>
-                                <input type="number" 
-                                       class="form-control" 
-                                       id="monto_fisico" 
-                                       name="monto_fisico" 
-                                       step="0.01" 
+                                <span class="input-group-text bg-success text-white">$</span>
+                                <input type="number"
+                                       class="form-control form-control-lg"
+                                       id="monto_fisico"
+                                       name="monto_fisico"
+                                       step="0.01"
                                        min="0"
                                        placeholder="0.00"
-                                       required>
+                                       required
+                                       style="font-size: 1.5rem; font-weight: bold;">
                             </div>
                             <small class="text-muted">
-                                Cuenta todo el efectivo que hay en la caja
+                                <i class="fas fa-hand-holding-usd"></i>
+                                Cuenta SOLO billetes y monedas físicas en la caja
                             </small>
                         </div>
 
                         <div class="alert alert-info mb-3">
-                            <strong>📊 Saldo según sistema:</strong>
-                            <br>
-                            ${{ number_format($saldoActual, 2) }}
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>📊 Efectivo esperado en sistema:</strong>
+                                </div>
+                                <div>
+                                    <h4 class="mb-0 text-success">${{ number_format($efectivoEsperado, 2) }}</h4>
+                                </div>
+                            </div>
                         </div>
 
                         <div id="diferencia_alert" class="alert d-none mb-3"></div>
@@ -259,11 +409,11 @@
                             <label for="observaciones" class="form-label">
                                 📝 Observaciones
                             </label>
-                            <textarea class="form-control" 
-                                      id="observaciones" 
-                                      name="observaciones" 
-                                      rows="3" 
-                                      placeholder="Notas adicionales sobre el cierre..."></textarea>
+                            <textarea class="form-control"
+                                      id="observaciones"
+                                      name="observaciones"
+                                      rows="3"
+                                      placeholder="Notas adicionales sobre el cierre (ej: diferencias encontradas, billetes rotos, etc)..."></textarea>
                         </div>
 
                         <div class="d-grid">
@@ -281,17 +431,38 @@
                 <div class="card-header bg-light">
                     <h6 class="mb-0">
                         <i class="fas fa-question-circle me-1"></i>
-                        ¿Cómo hacer el arqueo?
+                        ¿Cómo hacer el arqueo correctamente?
                     </h6>
                 </div>
                 <div class="card-body">
                     <ol class="small mb-0">
-                        <li class="mb-2">Cuenta todo el dinero físico en la caja</li>
-                        <li class="mb-2">Ingresa el monto contado arriba</li>
-                        <li class="mb-2">El sistema comparará con el saldo esperado</li>
-                        <li class="mb-2">Si hay diferencia, se registrará automáticamente</li>
-                        <li>Haz clic en "Registrar Cierre"</li>
+                        <li class="mb-2">
+                            <strong>Cuenta SOLO el efectivo físico</strong> (billetes y monedas) que está en la caja
+                        </li>
+                        <li class="mb-2">
+                            <strong>NO incluyas</strong> dinero de tarjeta, transferencias ni MercadoPago (ese va al banco)
+                        </li>
+                        <li class="mb-2">
+                            Ingresa el monto total contado en el campo "Efectivo Contado"
+                        </li>
+                        <li class="mb-2">
+                            El sistema comparará automáticamente con el efectivo esperado
+                        </li>
+                        <li class="mb-2">
+                            Si hay diferencia (sobrante o faltante), se registrará y deberás explicar el motivo
+                        </li>
+                        <li>
+                            Haz clic en "Registrar Cierre de Caja"
+                        </li>
                     </ol>
+
+                    <hr class="my-3">
+
+                    <div class="alert alert-info mb-0 small">
+                        <strong><i class="fas fa-lightbulb"></i> Consejo:</strong>
+                        <br>
+                        Al finalizar el día, verifica en tu banco/plataforma que coincida el dinero de tarjeta, transferencias y MercadoPago con lo que muestra el sistema arriba.
+                    </div>
                 </div>
             </div>
         </div>
@@ -301,67 +472,93 @@
 
 @push('scripts')
 <script>
-const saldoSistema = {{ $saldoActual }};
+// ✅ NUEVO: Comparar con efectivo esperado (no con saldo total)
+const efectivoEsperado = {{ $efectivoEsperado }};
 
 document.addEventListener('DOMContentLoaded', function() {
     // Calcular diferencia en tiempo real
     const montoFisicoInput = document.getElementById('monto_fisico');
     const diferenciaAlert = document.getElementById('diferencia_alert');
-    
+
     montoFisicoInput.addEventListener('input', function() {
         const montoFisico = parseFloat(this.value) || 0;
-        const diferencia = montoFisico - saldoSistema;
-        
+        const diferencia = montoFisico - efectivoEsperado;
+
         if (montoFisico > 0) {
             diferenciaAlert.classList.remove('d-none');
-            
+
             if (Math.abs(diferencia) < 0.01) {
                 // Coincide perfecto
                 diferenciaAlert.className = 'alert alert-success mb-3';
                 diferenciaAlert.innerHTML = `
-                    <i class="fas fa-check-circle"></i>
-                    <strong>¡Perfecto!</strong> El monto físico coincide con el sistema.
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-check-circle fa-2x me-3"></i>
+                        <div>
+                            <strong>✅ ¡Perfecto!</strong> El efectivo contado coincide con el sistema.
+                            <br><small>No hay diferencias en el arqueo de efectivo.</small>
+                        </div>
+                    </div>
                 `;
             } else if (diferencia > 0) {
                 // Sobra dinero
                 diferenciaAlert.className = 'alert alert-warning mb-3';
                 diferenciaAlert.innerHTML = `
-                    <i class="fas fa-exclamation-triangle"></i>
-                    <strong>Sobrante:</strong> $${Math.abs(diferencia).toFixed(2)}
-                    <br><small>Hay más dinero físico que en el sistema</small>
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-exclamation-triangle fa-2x me-3"></i>
+                        <div>
+                            <strong>⚠️ Sobrante de Efectivo:</strong> $${Math.abs(diferencia).toFixed(2)}
+                            <br><small>Hay MÁS dinero físico del que debería haber según el sistema</small>
+                        </div>
+                    </div>
                 `;
             } else {
                 // Falta dinero
                 diferenciaAlert.className = 'alert alert-danger mb-3';
                 diferenciaAlert.innerHTML = `
-                    <i class="fas fa-times-circle"></i>
-                    <strong>Faltante:</strong> $${Math.abs(diferencia).toFixed(2)}
-                    <br><small>Hay menos dinero físico que en el sistema</small>
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-times-circle fa-2x me-3"></i>
+                        <div>
+                            <strong>❌ Faltante de Efectivo:</strong> $${Math.abs(diferencia).toFixed(2)}
+                            <br><small>Hay MENOS dinero físico del que debería haber según el sistema</small>
+                        </div>
+                    </div>
                 `;
             }
         } else {
             diferenciaAlert.classList.add('d-none');
         }
     });
-    
+
     // Validación del formulario
     document.getElementById('cierreForm').addEventListener('submit', function(e) {
         const montoFisico = parseFloat(montoFisicoInput.value) || 0;
-        const diferencia = montoFisico - saldoSistema;
-        
-        if (montoFisico <= 0) {
+        const diferencia = montoFisico - efectivoEsperado;
+
+        if (montoFisico < 0) {
             e.preventDefault();
-            alert('Debe ingresar el monto físico contado en caja');
+            alert('❌ Debe ingresar el efectivo físico contado en caja');
             montoFisicoInput.focus();
             return false;
         }
-        
+
         // Advertencia si hay diferencia significativa
         if (Math.abs(diferencia) > 100) {
-            if (!confirm(`Hay una diferencia de $${Math.abs(diferencia).toFixed(2)}. ¿Desea continuar con el cierre?`)) {
+            const tipo = diferencia > 0 ? 'SOBRANTE' : 'FALTANTE';
+            const mensaje = `⚠️ HAY UN ${tipo} DE EFECTIVO DE $${Math.abs(diferencia).toFixed(2)}\n\n` +
+                          `Efectivo esperado: $${efectivoEsperado.toFixed(2)}\n` +
+                          `Efectivo contado: $${montoFisico.toFixed(2)}\n\n` +
+                          `¿Desea continuar con el cierre?`;
+
+            if (!confirm(mensaje)) {
                 e.preventDefault();
                 return false;
             }
+        }
+
+        // Confirmación final
+        if (!confirm('¿Confirma que desea registrar el cierre de caja con estos datos?')) {
+            e.preventDefault();
+            return false;
         }
     });
 });
