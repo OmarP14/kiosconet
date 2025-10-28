@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
+use App\Http\Requests\StoreVentaRequest;
 
 class VentaController extends Controller
 {
@@ -56,30 +57,33 @@ class VentaController extends Controller
     public function buscarApi(Request $request)
     {
         try {
-            $termino = $request->get('termino', '');
-            $listaPrecio = $request->get('lista_precio', 'minorista');
-            
-            if (strlen($termino) < 2) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Escribe al menos 2 letras',
-                    'data' => []
-                ]);
-            }
+            // ✅ MEJORADO: Validación formal del endpoint
+            $validated = $request->validate([
+                'termino' => 'required|string|min:2|max:100',
+                'lista_precio' => 'nullable|in:minorista,mayorista,especial'
+            ], [
+                'termino.required' => 'El término de búsqueda es requerido',
+                'termino.min' => 'Escribe al menos 2 letras',
+                'termino.max' => 'El término no puede exceder 100 caracteres',
+                'lista_precio.in' => 'Lista de precio no válida'
+            ]);
+
+            $termino = $validated['termino'];
+            $listaPrecio = $validated['lista_precio'] ?? 'minorista';
             
             $productos = Producto::where(function($query) use ($termino) {
                     $query->where('nombre', 'like', "%{$termino}%")
-                          ->orWhere('codigo_barra', 'like', "%{$termino}%")
-                          ->orWhere('descripcion', 'like', "%{$termino}%");
+                          ->orWhere('codigo', 'like', "%{$termino}%");
                 })
                 ->where('activo', true)
                 ->limit(20)
                 ->get()
                 ->map(function($producto) use ($listaPrecio) {
+                    // Calcular precio según lista de precios con márgenes diferentes
                     $precio = match($listaPrecio) {
-                        'mayorista' => $producto->precio_mayorista ?? $producto->precio,
-                        'especial' => $producto->precio_especial ?? $producto->precio,
-                        default => $producto->precio
+                        'mayorista' => $producto->getPrecioVenta(30),  // 30% margen mayorista
+                        'especial' => $producto->getPrecioVenta(35),   // 35% margen especial
+                        default => $producto->getPrecioVenta(40)       // 40% margen minorista
                     };
                     
                     $diasHastaVencimiento = null;
@@ -91,12 +95,12 @@ class VentaController extends Controller
                     return [
                         'id' => $producto->id,
                         'nombre' => $producto->nombre,
-                        'descripcion' => $producto->descripcion,
-                        'codigo_barra' => $producto->codigo_barra,
+                        'codigo' => $producto->codigo ?? '',
+                        'categoria' => $producto->categoria ?? '',
                         'stock' => $producto->stock,
                         'stock_minimo' => $producto->stock_minimo ?? 10,
                         'precio' => $precio,
-                        'precio_costo' => $producto->precio_costo ?? 0,
+                        'precio_compra' => $producto->precio_compra ?? 0,
                         'precio_formateado' => '$' . number_format($precio, 2),
                         'fecha_vencimiento' => $producto->fecha_vencimiento,
                         'dias_hasta_vencimiento' => $diasHastaVencimiento,
@@ -121,44 +125,13 @@ class VentaController extends Controller
     // ==========================================
     // GUARDAR UNA VENTA NUEVA
     // ==========================================
-    
-    public function store(Request $request)
-    {
-        // ✅ VALIDACIÓN COMPLETA
-        $validator = Validator::make($request->all(), [
-            'cliente_id' => 'required|exists:clientes,id',
-            'fecha_venta' => 'nullable|date',
-            'lista_precios' => 'required|in:minorista,mayorista,especial',
-            'metodo_pago' => 'required|in:efectivo,tarjeta,transferencia,cuenta_corriente,cc,mixto',
-            'productos' => 'required|array|min:1',
-            'productos.*.id' => 'required|exists:productos,id',
-            'productos.*.cantidad' => 'required|integer|min:1',
-            'productos.*.precio' => 'required|numeric|min:0',
-            'total' => 'required|numeric|min:0',
-            
-            // Validaciones condicionales
-            'monto_recibido' => 'required_if:metodo_pago,efectivo|numeric|min:0',
-            'tipo_tarjeta' => 'required_if:metodo_pago,tarjeta|in:debito,credito',
-            'ultimos_digitos' => 'required_if:metodo_pago,tarjeta|digits:4',
-            'codigo_autorizacion' => 'required_if:metodo_pago,tarjeta|string|max:50',
-            'numero_transferencia' => 'required_if:metodo_pago,transferencia|string|max:50',
-            'banco' => 'required_if:metodo_pago,transferencia|string|max:100',
-            'pagos_mixtos' => 'required_if:metodo_pago,mixto|array|min:1',
-        ], [
-            'productos.required' => 'Debe agregar al menos un producto',
-            'productos.min' => 'Debe agregar al menos un producto',
-            'monto_recibido.required_if' => 'El monto recibido es obligatorio para pago en efectivo',
-            'cliente_id.exists' => 'El cliente seleccionado no existe',
-            'pagos_mixtos.required_if' => 'Debe especificar al menos un método de pago mixto',
-        ]);
 
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Errores de validación',
-                'errors' => $validator->errors()
-            ], 422);
-        }
+    /**
+     * ✅ MEJORADO: Usa StoreVentaRequest para validación
+     */
+    public function store(StoreVentaRequest $request)
+    {
+        // ✅ La validación ya se realizó en StoreVentaRequest
 
         DB::beginTransaction();
 

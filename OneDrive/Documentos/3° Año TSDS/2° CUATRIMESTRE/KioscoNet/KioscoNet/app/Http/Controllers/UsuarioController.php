@@ -332,8 +332,9 @@ class UsuarioController extends Controller
     public function resetPassword(Usuario $usuario)
     {
         try {
-            $nuevaPassword = 'password123'; // En producción, generar una aleatoria
-            
+            // ✅ CORREGIDO: Generar contraseña aleatoria segura
+            $nuevaPassword = Str::random(12); // 12 caracteres aleatorios
+
             $usuario->update([
                 'password' => Hash::make($nuevaPassword)
             ]);

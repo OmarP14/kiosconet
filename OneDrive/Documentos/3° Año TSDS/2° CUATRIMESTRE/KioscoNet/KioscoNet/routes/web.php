@@ -44,11 +44,18 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/{venta}/reimprimir', [VentaController::class, 'reimprimir'])->name('reimprimir');
     });
 
-    // Ruta para la API interna (para AJAX)
+    // ==========================================
+    // API INTERNA (AJAX) - CONSOLIDADO
+    // ==========================================
     Route::prefix('api')->name('api.')->group(function () {
-    Route::get('/productos/buscar', [ProductoController::class, 'buscarApi'])->name('productos.buscar');
-    Route::post('/ventas', [VentaController::class, 'store'])->name('ventas.store');
-    Route::get('/ventas/{venta}/detalles', [VentaController::class, 'obtenerDetalles'])->name('ventas.detalles');
+        // Productos
+        Route::get('/productos/buscar', [ProductoController::class, 'buscarApi'])->name('productos.buscar');
+        Route::get('/productos/{id}', [ProductoController::class, 'obtenerProducto'])->name('productos.obtener');
+        Route::post('/productos/verificar-stock', [ProductoController::class, 'verificarStock'])->name('productos.verificar-stock');
+
+        // Ventas
+        Route::post('/ventas', [VentaController::class, 'store'])->name('ventas.store');
+        Route::get('/ventas/{venta}/detalles', [VentaController::class, 'obtenerDetalles'])->name('ventas.detalles');
     });
     // ==========================================
     // CLIENTES (Rutas completas)
@@ -81,38 +88,24 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/{cliente}/estado-cuenta', [ClienteController::class, 'estadoCuenta'])->name('estado-cuenta');
     });
 
-    // PRODUCTOS
-    Route::resource('productos', ProductoController::class);
-  
-    // RUTAS DE PRODUCTOS
     // ==========================================
-
+    // PRODUCTOS
+    // ==========================================
     Route::middleware(['auth'])->prefix('productos')->name('productos.')->group(function () {
-    
-    // Rutas básicas CRUD
-    Route::get('/', [ProductoController::class, 'index'])->name('index');
-    Route::get('/crear', [ProductoController::class, 'create'])->name('create');
-    Route::post('/', [ProductoController::class, 'store'])->name('store');
-    Route::get('/{id}', [ProductoController::class, 'show'])->name('show');
-    Route::get('/{id}/editar', [ProductoController::class, 'edit'])->name('edit');
-    Route::put('/{id}', [ProductoController::class, 'update'])->name('update');
-    Route::delete('/{id}', [ProductoController::class, 'destroy'])->name('destroy');
-    
-    // ✅ RUTAS NUEVAS CORREGIDAS
-    Route::get('/listado/stock-bajo', [ProductoController::class, 'stockBajo'])->name('stock-bajo');
-    Route::patch('/{id}/ajustar-stock', [ProductoController::class, 'ajustarStock'])->name('ajustar-stock');
-    Route::patch('/{id}/toggle-estado', [ProductoController::class, 'toggleEstado'])->name('toggle-estado');
-});
+        // Rutas básicas CRUD
+        Route::get('/', [ProductoController::class, 'index'])->name('index');
+        Route::get('/crear', [ProductoController::class, 'create'])->name('create');
+        Route::post('/', [ProductoController::class, 'store'])->name('store');
+        Route::get('/{id}', [ProductoController::class, 'show'])->name('show');
+        Route::get('/{id}/editar', [ProductoController::class, 'edit'])->name('edit');
+        Route::put('/{id}', [ProductoController::class, 'update'])->name('update');
+        Route::delete('/{id}', [ProductoController::class, 'destroy'])->name('destroy');
 
-// ==========================================
-// RUTAS API DE PRODUCTOS (para ventas)
-// ==========================================
-
-Route::middleware(['auth'])->prefix('api/productos')->name('api.productos.')->group(function () {
-    Route::get('/buscar', [ProductoController::class, 'buscarApi'])->name('buscar');
-    Route::get('/{id}', [ProductoController::class, 'obtenerProducto'])->name('obtener');
-    Route::post('/verificar-stock', [ProductoController::class, 'verificarStock'])->name('verificar-stock');
-});
+        // Rutas especiales
+        Route::get('/listado/stock-bajo', [ProductoController::class, 'stockBajo'])->name('stock-bajo');
+        Route::patch('/{id}/ajustar-stock', [ProductoController::class, 'ajustarStock'])->name('ajustar-stock');
+        Route::patch('/{id}/toggle-estado', [ProductoController::class, 'toggleEstado'])->name('toggle-estado');
+    });
 
     // ==========================================
     // CAJA (Sistema Simple)
@@ -195,12 +188,9 @@ Route::middleware(['auth'])->prefix('api/productos')->name('api.productos.')->gr
         Route::get('resumen', [ReporteController::class, 'resumenVentas'])->name('resumen');
     });
 
-    // API INTERNA
-    Route::prefix('api')->group(function () {
-        Route::get('/productos/buscar', [ProductoController::class, 'buscarApi']);
-        Route::post('/ventas', [VentaController::class, 'store']);
-    });
-
+    // ==========================================
+    // RUTA PÚBLICA (sin autenticación)
+    // ==========================================
     // Ruta pública para ver comprobantes (sin necesidad de login)
     Route::get('/comprobante/{token}', [VentaController::class, 'consultarComprobante'])->name('comprobante.publico');
 });

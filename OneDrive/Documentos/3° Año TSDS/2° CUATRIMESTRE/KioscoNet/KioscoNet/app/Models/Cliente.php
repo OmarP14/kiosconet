@@ -73,13 +73,14 @@ class Cliente extends Model
     }
 
     /**
-     * Movimientos de cuenta corriente (si tienes esta tabla)
+     * Movimientos de cuenta corriente
+     * ❌ DESHABILITADO: La clase MovimientoCuentaCorriente no existe en el sistema
+     * TODO: Implementar cuando se cree la tabla y modelo de movimientos
      */
-    public function movimientosCuentaCorriente()
-    {
-        // Si no tienes tabla de movimientos, puedes comentar esto
-        return $this->hasMany(MovimientoCuentaCorriente::class)->orderBy('created_at', 'desc');
-    }
+    // public function movimientosCuentaCorriente()
+    // {
+    //     return $this->hasMany(MovimientoCuentaCorriente::class)->orderBy('created_at', 'desc');
+    // }
 
     // ========== ACCESSORS ==========
 

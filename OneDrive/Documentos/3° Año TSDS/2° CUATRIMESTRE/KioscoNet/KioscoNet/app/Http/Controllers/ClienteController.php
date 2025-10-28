@@ -7,6 +7,8 @@ use App\Models\Venta;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use App\Http\Requests\StoreClienteRequest;
+use App\Http\Requests\UpdateClienteRequest;
 
 class ClienteController extends Controller
 {
@@ -79,26 +81,11 @@ class ClienteController extends Controller
 
     /**
      * Almacenar nuevo cliente
+     * ✅ MEJORADO: Usa StoreClienteRequest para validación
      */
-        public function store(Request $request)
+        public function store(StoreClienteRequest $request)
         {
-            $request->validate([
-                'nombre' => 'required|string|max:255',
-                'apellido' => 'nullable|string|max:255',     // ✅ CAMBIADO: apellido en lugar de documento
-                'telefono' => 'nullable|string|max:20',
-                'email' => 'nullable|email|max:255|unique:clientes',
-                'direccion' => 'nullable|string|max:255',
-                'tipo_cliente' => 'nullable|in:minorista,mayorista,especial',  // ✅ AGREGADO
-                'limite_credito' => 'nullable|numeric|min:0|max:999999.99',
-                'activo' => 'boolean',
-            ], [
-                'nombre.required' => 'El nombre del cliente es obligatorio.',
-                'email.unique' => 'Ya existe un cliente con este email.',
-                'email.email' => 'El email debe tener un formato válido.',
-                'limite_credito.numeric' => 'El límite de crédito debe ser un número.',
-                'limite_credito.max' => 'El límite de crédito no puede ser mayor a $999,999.99',
-                'tipo_cliente.in' => 'El tipo de cliente debe ser: minorista, mayorista o especial.',
-            ]);
+            // ✅ La validación ya se realizó en StoreClienteRequest
 
             try {
                 $cliente = Cliente::create([
@@ -171,18 +158,12 @@ class ClienteController extends Controller
     /**
      * Actualizar cliente
      */
-        public function update(Request $request, Cliente $cliente)
+        /**
+         * ✅ MEJORADO: Usa UpdateClienteRequest para validación
+         */
+        public function update(UpdateClienteRequest $request, Cliente $cliente)
     {
-        $request->validate([
-            'nombre' => 'required|string|max:255',
-            'apellido' => 'nullable|string|max:255',    // ✅ CAMBIADO
-            'telefono' => 'nullable|string|max:20',
-            'email' => 'nullable|email|max:255|unique:clientes,email,' . $cliente->id,
-            'direccion' => 'nullable|string|max:255',
-            'tipo_cliente' => 'nullable|in:minorista,mayorista,especial',  // ✅ AGREGADO
-            'limite_credito' => 'nullable|numeric|min:0|max:999999.99',
-            'activo' => 'boolean',
-        ]);
+        // ✅ La validación ya se realizó en UpdateClienteRequest
 
         try {
             $datosAnteriores = $cliente->toArray();

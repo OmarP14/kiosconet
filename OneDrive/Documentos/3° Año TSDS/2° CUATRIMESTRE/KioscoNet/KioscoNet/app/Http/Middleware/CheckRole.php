@@ -10,20 +10,26 @@ class CheckRole
 {
     /**
      * Handle an incoming request.
+     * Verifica que el usuario autenticado tenga el rol requerido
      *
-     * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
+     * @param  \Illuminate\Http\Request  $request
+     * @param  \Closure  $next
+     * @param  string  $rol  El rol requerido (administrador o vendedor)
+     * @return \Symfony\Component\HttpFoundation\Response
      */
-    public function handle(Request $request, Closure $next): Response
+    public function handle(Request $request, Closure $next, string $rol): Response
     {
+        // Verificar si el usuario está autenticado
+        if (!auth()->check()) {
+            return redirect()->route('login')
+                ->with('error', 'Debes iniciar sesión para acceder a esta página.');
+        }
+
+        // Verificar si el usuario tiene el rol requerido
+        if (auth()->user()->rol !== $rol) {
+            abort(403, 'No tienes permisos suficientes para acceder a esta sección.');
+        }
+
         return $next($request);
     }
-    public function __construct()
-{
-    $this->middleware('auth');
-    $this->middleware('can:ventas.index')->only(['index']);
-    $this->middleware('can:ventas.create')->only(['create', 'store']);
-    $this->middleware('can:ventas.show')->only(['show', 'ticket']);
-    $this->middleware('can:ventas.destroy')->only(['destroy']);
-    $this->middleware('can:ventas.reportes')->only(['reporteVentas']);
-}
 }

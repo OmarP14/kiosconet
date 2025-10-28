@@ -5,9 +5,12 @@ namespace App\Http\Controllers;
 use App\Models\Producto;
 use App\Models\Proveedor;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use App\Http\Requests\StoreProductoRequest;
+use App\Http\Requests\UpdateProductoRequest;
 
 /**
  * =====================================================
@@ -191,38 +194,11 @@ class ProductoController extends Controller
     }
 
     /**
-     * ✅ MEJORADO: Validación completa y manejo de imagen
+     * ✅ MEJORADO: Usa StoreProductoRequest para validación
      */
-    public function store(Request $request)
+    public function store(StoreProductoRequest $request)
     {
-        $validator = Validator::make($request->all(), [
-            'nombre' => 'required|string|max:255',
-            'codigo' => 'nullable|string|unique:productos,codigo',
-            'proveedor_id' => 'required|exists:proveedores,id',
-            'precio_compra' => 'required|numeric|min:0',
-            'stock' => 'required|integer|min:0',
-            'stock_minimo' => 'required|integer|min:0',
-            'categoria' => 'nullable|string|max:100',
-            'fecha_vencimiento' => 'nullable|date|after:today',
-            'imagen' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-            'activo' => 'boolean'
-        ], [
-            'nombre.required' => 'El nombre del producto es obligatorio',
-            'codigo.unique' => 'Este código ya está registrado',
-            'proveedor_id.required' => 'Debe seleccionar un proveedor',
-            'proveedor_id.exists' => 'El proveedor seleccionado no existe',
-            'precio_compra.required' => 'El precio de compra es obligatorio',
-            'precio_compra.min' => 'El precio debe ser mayor o igual a 0',
-            'stock.required' => 'El stock es obligatorio',
-            'imagen.image' => 'El archivo debe ser una imagen',
-            'imagen.max' => 'La imagen no debe superar los 2MB',
-        ]);
-
-        if ($validator->fails()) {
-            return redirect()->back()
-                ->withErrors($validator)
-                ->withInput();
-        }
+        // ✅ La validación ya se realizó en StoreProductoRequest
 
         try {
             $datos = $request->except('imagen');
@@ -285,30 +261,12 @@ class ProductoController extends Controller
     }
 
     /**
-     * ✅ MEJORADO: Actualización con manejo de imagen
+     * ✅ MEJORADO: Usa UpdateProductoRequest para validación
      */
-    public function update(Request $request, $id)
+    public function update(UpdateProductoRequest $request, $id)
     {
+        // ✅ La validación ya se realizó en UpdateProductoRequest
         $producto = Producto::findOrFail($id);
-
-        $validator = Validator::make($request->all(), [
-            'nombre' => 'required|string|max:255',
-            'codigo' => 'nullable|string|unique:productos,codigo,' . $id,
-            'proveedor_id' => 'required|exists:proveedores,id',
-            'precio_compra' => 'required|numeric|min:0',
-            'stock' => 'required|integer|min:0',
-            'stock_minimo' => 'required|integer|min:0',
-            'categoria' => 'nullable|string|max:100',
-            'fecha_vencimiento' => 'nullable|date',
-            'imagen' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-            'activo' => 'boolean'
-        ]);
-
-        if ($validator->fails()) {
-            return redirect()->back()
-                ->withErrors($validator)
-                ->withInput();
-        }
 
         try {
             $datos = $request->except('imagen');
@@ -414,6 +372,9 @@ class ProductoController extends Controller
                 ->with('error', 'Datos inválidos para ajustar stock');
         }
 
+        // ✅ MEJORADO: Agregada transacción DB para mayor seguridad
+        DB::beginTransaction();
+
         try {
             $producto = Producto::findOrFail($id);
             $stockAnterior = $producto->stock;
@@ -432,10 +393,14 @@ class ProductoController extends Controller
                 'usuario_id' => auth()->id()
             ]);
 
+            DB::commit();
+
             return redirect()->back()
                 ->with('success', "Stock actualizado correctamente. {$producto->nombre}: {$stockAnterior} → {$stockNuevo}");
 
         } catch (\Exception $e) {
+            DB::rollBack();
+
             Log::error('Error al ajustar stock', [
                 'producto_id' => $id,
                 'error' => $e->getMessage()

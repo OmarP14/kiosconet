@@ -22,3 +22,29 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+# ==========================================
+# ARCHIVOS SENSIBLES Y DE DESARROLLO
+# ==========================================
+
+# Archivos de backup
+*.backup
+*.bak
+*.old
+*.tmp
+*~
+
+# Bases de datos (excepto migrations)
+*.sql
+*.sqlite
+*.db
+!database/migrations/*.sql
+
+# Scripts de desarrollo
+/scripts/dev/
+fix_*.php
+fix_*.ps1
+*.bat
+
+# Archivos de configuración local
+/config/local.php
